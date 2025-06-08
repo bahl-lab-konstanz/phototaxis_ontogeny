@@ -13,6 +13,8 @@ If you use this code in your work, please cite our paper:
 Capelle et al., [Paper Title], [Journal Name], [Year]
 ([DOI link])
 
+<img src="visual_abstract.png" alt="Visual abstract" width="300"/>
+
 ### Folder Structure
 - `figures/` — Scripts for generating figures
 - `settings/` — Configuration and settings files
