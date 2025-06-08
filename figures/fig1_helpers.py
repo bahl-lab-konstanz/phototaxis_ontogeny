@@ -290,7 +290,6 @@ def compute_swim_properties_event(event_df, bin_names: list | str):
          *bin_names], observed=True)
 
     # Compute swim properties (median per fish and per bin)
-    # TODO: fit distribution instead of median?
     print("| median within fish ", end='')
     group_median = group[['total_duration', 'total_distance', 'estimated_orientation_change', 'event_freq', 'average_speed', 'brightness']].median()
     # After taking the median, round brightness values again to their bin

@@ -24,8 +24,6 @@ for radius in radii:
     for sign in [+1, -1]:
         new_stim_name = sign * radius
 
-        # Use split_dict to exclude the first 10 seconds of each trial and get rid of stim_counter
-        # TODO: we do not cut out the first 10 seconds here
         new_stim_name_right = f'{new_stim_name:02.1f}_right'
         new_stim_name_left = f'{new_stim_name:02.1f}_left'
         stim_query_right = f'left_{b_min:03.0f}lux_right_{b_max:03.0f}lux_radius{sign * radius:02.1f}cm'

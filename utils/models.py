@@ -205,7 +205,6 @@ class Model:
 
     # General functions for evaluating the model ##############################
     @staticmethod
-    # @jit(nopython=True)  # TODO uncomment after debugging
     def _eval_step(
             # Inputs (visual stimulus)
             left_eye_lux, right_eye_lux, lpf_left_eye, lpf_right_eye,

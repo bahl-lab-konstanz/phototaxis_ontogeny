@@ -13,7 +13,7 @@ from .slack_helper import send_slack_message
 def prepare_data_wrapper(
     age_category, agent_name,
     experiment_name, flip_dict, split_dict, label_dict,
-    included_stim_names,  # TODO: do we actually need this?
+    included_stim_names,
     rolling_window=None, resampling_window=None,
     do_preprocess=False,
     do_tracking=False, do_event=True,
@@ -105,9 +105,7 @@ def prepare_data_wrapper(
             path_to_analysed_folder=path_to_agent_folder,
             min_percentage_grating_left=0.5,
         )
-        # TODO: change after debugging
         included_experiment_IDs, excluded_experiment_IDs = prescreening.run()
-        # excluded_experiment_IDs = None
     else:
         excluded_experiment_IDs = None
 
@@ -121,9 +119,7 @@ def prepare_data_wrapper(
         excluded_experiment_IDs=excluded_experiment_IDs,
         overwrite_output_file=False
     )
-    # TODO: change after debugging
     combined_event_df = combineData.run()
-    # combined_event_df = pd.read_hdf(path_to_input_file, key="all_bout_data_pandas")
 
     # Sanity Check ################################################################
     if do_event:
@@ -138,9 +134,7 @@ def prepare_data_wrapper(
             plot_statistics=True,
             do_overwrite=True,
         )
-        # TODO: change after debugging
         event_df = sanity_check.run()
-        # event_df = pd.read_hdf(path_to_input_file, key="all_bout_data_sanity_checked_pandas")
 
     # Analysis Start ##############################################################
     analysis_start = AnalysisStart(
