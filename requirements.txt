@@ -1,11 +1,10 @@
-h5py>=3.0
-keyring>=23.0
-matplotlib>=3.4
-numba>=0.55
-numpy>=1.21
-pandas>=2.3
-scipy>=1.7
-seaborn>=0.11
-slack_sdk>=3.11
-tqdm>=4.62
+h5py>=3.12.0
+keyring>=25.6
+matplotlib>=3.10.3
+numba>=0.61.2
+numpy==2.2.0  # Numba needs NumPy 2.2 or less
+pandas>=2.3.0
+scipy>=1.15.0
+seaborn>=0.13.2
+slack_sdk>=3.34.0
 
