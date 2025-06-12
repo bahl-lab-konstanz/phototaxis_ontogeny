@@ -44,9 +44,9 @@ agent_mapping = {
 main_order = ['A', 'C', 'D', 'D+C', 'Proposed', ]
 supp_order = [
     agent_base_norm, 'A', 'C',
-    'D', 'D+C', 'Proposed*',
+    'D', 'D+C', 'Proposed', 'Proposed*',
     'Five-pathways',
-    'AD', 'DA', 'Proposed',
+    'AD', 'DA',
 ]
 
 # #############################################################################

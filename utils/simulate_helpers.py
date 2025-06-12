@@ -394,6 +394,7 @@ def get_stim_fish_locked(stim_name, ts):
         b_right = np.ones_like(ts) * right_brightness
     elif 'up' in stim_name:
         # Temporal ############################################################
+        # transition_1 = int(stim_name.split('0lux_'))  # TODO
         # Start at 0 lux
         b_left = np.ones_like(ts) * 0
         b_right = np.ones_like(ts) * 0

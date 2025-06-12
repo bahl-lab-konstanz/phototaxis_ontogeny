@@ -7,7 +7,7 @@ from scipy.stats import mannwhitneyu, ttest_ind, ttest_rel, wilcoxon, shapiro, c
 from scipy.special import kl_div
 
 from utils.plot_utils import *
-from settings.general_settings import rng
+from settings.general_settings import *
 
 # #############################################################################
 # User settings
@@ -290,6 +290,7 @@ def compute_swim_properties_event(event_df, bin_names: list | str):
          *bin_names], observed=True)
 
     # Compute swim properties (median per fish and per bin)
+    # TODO: fit distribution instead of median?
     print("| median within fish ", end='')
     group_median = group[['total_duration', 'total_distance', 'estimated_orientation_change', 'event_freq', 'average_speed', 'brightness']].median()
     # After taking the median, round brightness values again to their bin
@@ -590,6 +591,26 @@ def get_agent_zscores(
 # Plot functions
 # #############################################################################
 # Trajectories ################################################################
+def plot_single_trajectory(ax, exp_df, stim_name, agent, s=0.2, alpha=0.05):
+    if stim_name not in exp_df.index.unique('stimulus_name'):
+        return
+
+    # Get data for this stimulus
+    stim_df = exp_df.xs(stim_name, level='stimulus_name')
+    ax.scatter(
+        stim_df['x_position'], stim_df['y_position'],
+        color=agent.color, edgecolors='none',  # edgecolor to 'none' to avoid transparency issues
+        s=s, alpha=alpha,
+    )
+
+    set_lims(ax, [-6, 6], [-6, 6])
+    hide_all_spines_and_ticks(ax)
+    set_aspect(ax, 'equal')
+
+    if stim_name == 'splitview_left_dark_right_bright':
+        set_axlines(ax, axvlines=0)
+
+
 def plot_exp_trajectories(
         exp_df, agent, stim_dict, k=0,
         s=0.2, alpha=0.05,
@@ -613,20 +634,7 @@ def plot_exp_trajectories(
         )
         ax = add_axes(fig, l, b, w, h)
 
-        # Get data for this stimulus
-        stim_df = exp_df.xs(stim_name, level='stimulus_name')
-        ax.scatter(
-            stim_df['x_position'], stim_df['y_position'],
-            color=agent.color, edgecolors='none',  # edgecolor to 'none' to avoid transparency issues
-            s=s, alpha=alpha,
-        )
-
-        set_lims(ax, [-6, 6], [-6, 6])
-        hide_all_spines_and_ticks(ax)
-        set_aspect(ax, 'equal')
-
-        if stim_name == 'splitview_left_dark_right_bright':
-            set_axlines(ax, axvlines=0)
+        plot_single_trajectory(ax, exp_df, stim_name, agent)
 
     # Add separate ax for scalebar
     i += 1
@@ -644,7 +652,6 @@ def plot_exp_trajectories(
 
     return fig
 
-
 def plot_all_trajectories(tracking_df_full, agents, stim_dict, path_to_fig_folder, **kwargs):
     # Plot separately for each agent
     for k, agent in enumerate(agents):
@@ -660,11 +667,64 @@ def plot_all_trajectories(tracking_df_full, agents, stim_dict, path_to_fig_folde
 
 
 # 2D density hexbin ###########################################################
+def plot_2d_density_ax(ax, stim_df, n_fish_stim, agent, vmin=None, vmax=None):
+    # We sum all probabilities normalized within fish and then divide by n_fish
+    hb = ax.hexbin(
+        stim_df['x_position'], stim_df['y_position'],
+        # Compute mean over fish, weighting each fish equally
+        # for this, we use 1 / n_fish and np.sum as reduce_C_function
+        # we multiply with 100 to convert to percentage
+        C=stim_df['prob'] / n_fish_stim * 100, reduce_C_function=np.sum,
+        # C=stim_df['prob'] * 100, reduce_C_function=np.mean,
+        gridsize=11, extent=(-6, 6, -6, 6),
+        linewidths=0,  # no lines to avoid overlap
+        cmap=agent.cmap,
+        vmin=vmin, vmax=vmax,
+    )
+
+    # The outermost hexagons only include half of the data,
+    # so we set their values to nan to avoid misinterpretation
+    hex_x, hex_y = hb.get_offsets().T  # Extract (x, y) centers of hexagons
+    radii = np.sqrt(hex_x ** 2 + hex_y ** 2)
+    array = hb.get_array()
+    array[radii >= 5] = np.nan
+    hb.set_array(array)
+    hb.set_clim(vmin, vmax)
+    hb.set_cmap(agent.cmap)
+
+    ax.set_aspect('equal')
+    hide_all_spines_and_ticks(ax)
+    set_ticks(ax, x_ticks=[], y_ticks=[])
+
+    # # Plot circle with radius 5 and 6 cm
+    # circle = plt.Circle((0, 0), 5, color=COLOR_ANNOT, fill=False, lw=1)
+    # ax.add_artist(circle)
+
+    # Print vmin and vmax
+    if isinstance(vmax, type(None)):
+        hb_vmin = hb.get_array().min()
+        hb_vmax = hb.get_array().max()
+        hb_vmean = hb.get_array().mean()
+        print(f"{agent.name} | \t: vmin: {hb_vmin:.2f} | vmax: {hb_vmax:.2f} | vmean: {hb_vmean:.2f}")
+
+    # Create colorbar based on vmin and vmax
+    ticks = np.linspace(vmin, vmax, 4)
+    ticklabels = [f'{tick:.1f}' for tick in ticks]
+    cbar = get_colorbar(
+        agent.cmap, ticks=ticks, ticklabels=ticklabels,
+        orientation='vertical',
+        figsize=(ax_x_cm * cm, ax_y_cm * cm)
+    )
+    return cbar
+
+
 def plot_2d_density(
         tracking_df, agents, stim_dict,
         vmin=0, vmax=None,
         ax_x_cm=2, ax_y_cm=2, x_offset=0.2,
 ):
+
+    cbars = []
 
     # Create figure
     fig = create_figure(fig_big_width, ax_y_cm + 2 * pad_y_cm)
@@ -694,61 +754,87 @@ def plot_2d_density(
             stim_df = agent_tracking_df.xs(stim_name, level='stimulus_name').copy()
 
             # We sum all probabilities normalized within fish and then divide by n_fish
-            n_fish = stim_df.index.unique('experiment_ID').size
-            hb = ax.hexbin(
-                stim_df['x_position'], stim_df['y_position'],
-                # Compute mean over fish, weighting each fish equally
-                # for this, we use 1 / n_fish and np.sum as reduce_C_function
-                # we multiply with 100 to convert to percentage
-                C=stim_df['prob'] / n_fish * 100, reduce_C_function=np.sum,
-                # C=stim_df['prob'] * 100, reduce_C_function=np.mean,
-                gridsize=11, extent=(-6, 6, -6, 6),
-                linewidths=0,  # no lines to avoid overlap
-                cmap=agent.cmap,
-                vmin=vmin, vmax=vmax,
-            )
-
-            # The outermost hexagons only include half of the data,
-            # so we set their values to nan to avoid misinterpretation
-            hex_x, hex_y = hb.get_offsets().T  # Extract (x, y) centers of hexagons
-            radii = np.sqrt(hex_x ** 2 + hex_y ** 2)
-            array = hb.get_array()
-            array[radii >= 5] = np.nan
-            hb.set_array(array)
-            hb.set_clim(vmin, vmax)
-            hb.set_cmap(agent.cmap)
-
-            ax.set_aspect('equal')
-            hide_all_spines_and_ticks(ax)
-            set_ticks(ax, x_ticks=[], y_ticks=[])
-
-            # # Plot circle with radius 5 and 6 cm
-            # circle = plt.Circle((0, 0), 5, color=COLOR_ANNOT, fill=False, lw=1)
-            # ax.add_artist(circle)
-
-            # Print vmin and vmax
-            if isinstance(vmax, type(None)):
-                hb_vmin = hb.get_array().min()
-                hb_vmax = hb.get_array().max()
-                hb_vmean = hb.get_array().mean()
-                print(f"{agent.name} | {stim_name} \t: vmin: {hb_vmin:.2f} | vmax: {hb_vmax:.2f} | vmean: {hb_vmean:.2f}")
+            n_fish_stim = stim_df.index.unique('experiment_ID').size
+            cbar = plot_2d_density_ax(ax, stim_df, n_fish_stim, agent, stim_values, vmin=vmin, vmax=vmax)
+        cbars.append(cbar)  # Store one colorbar per agent
 
     fig.suptitle(
         f'{agents[0].cmap.name}, {agents[1].cmap.name} | vmin: {vmin:.1f} | vmax: {vmax:.1f}',
     )
 
-    # Create colorbars separately
-    cbars = []
-    ticks = np.linspace(vmin, vmax, 4)
-    ticklabels = [f'{tick:.1f}' for tick in ticks]
-    for agent in agents:
-        cbars.append(
-            get_colorbar(
-                agent.cmap, ticks=ticks, ticklabels=ticklabels,
-                orientation='vertical',
-                figsize=(ax_x_cm * cm, ax_y_cm * cm))
-        )
     return fig, cbars
+
+
+def compute_2d_density_control_ax(agent_tracking_df):
+    # Create an empty axes to compute the control
+    fig_empty, ax_empty = plt.subplots(1, 1)
+
+    # Get control density histogram
+    if 'control' in stim_names:
+        control_df = agent_tracking_df.xs('control', level='stimulus_name')
+        n_fish_control = control_df.index.unique('experiment_ID').size
+        hb_control = ax_empty.hexbin(
+            control_df['x_position'], control_df['y_position'],
+            C=control_df['prob'] / n_fish_control * 100,  # Normalize by number of fish
+            reduce_C_function=np.sum,
+            gridsize=11, extent=(-6, 6, -6, 6),
+            linewidths=0
+        )
+        control_array = hb_control.get_array()
+    else:
+        control_array = None  # No control available
+
+    plt.close(fig_empty)  # Close the figure
+
+    return control_array
+
+
+def plot_2d_density_diff_ax(ax, stim_df, n_fish_stim, control_array, vmin=-0.4, vmax=0.4, cmap=CMAP_DIFF):
+    # Compute hexagonal histogram for the stimulus
+    hb_stim = ax.hexbin(
+        stim_df['x_position'], stim_df['y_position'],
+        C=stim_df['prob'] / n_fish_stim * 100,  # Normalize by number of fish
+        reduce_C_function=np.sum,
+        gridsize=11, extent=(-6, 6, -6, 6),
+        linewidths=0
+    )
+    stim_array = hb_stim.get_array()
+
+    # The outermost hexagons only include half of the data,
+    # so we set their values to nan to avoid misinterpretation
+    hex_x, hex_y = hb_stim.get_offsets().T  # Extract (x, y) centers of hexagons
+    radii = np.sqrt(hex_x ** 2 + hex_y ** 2)
+    stim_array[radii >= 5] = np.nan
+
+    # Compute density difference if control exists
+    if control_array is not None:
+        density_diff = stim_array - control_array  # Both already normalized
+        hb_stim.set_array(density_diff)
+    else:
+        hb_stim.set_array(stim_array)
+
+    # Print vmin and vmax
+    if isinstance(vmax, type(None)):
+        hb_vmin = hb_stim.get_array().min()
+        hb_vmax = hb_stim.get_array().max()
+        hb_vmean = hb_stim.get_array().mean()
+        print(f"\t: vmin: {hb_vmin:.2f} | vmax: {hb_vmax:.2f} | vmean: {hb_vmean:.2f}")
+
+    hb_stim.set_clim(vmin, vmax)
+    hb_stim.set_cmap(cmap)
+    ax.set_aspect('equal')
+    hide_all_spines_and_ticks(ax)
+    set_ticks(ax, x_ticks=[], y_ticks=[])
+
+    # Create colorbar based on vmin and vmax
+    ticks = np.linspace(vmin, vmax, 5)
+    ticklabels = [f'{tick:.1f}' for tick in ticks]
+    cbar = get_colorbar(
+        cmap, ticks=ticks, ticklabels=ticklabels,
+        orientation='vertical',
+        figsize=(ax_x_cm * cm, ax_y_cm * cm)
+    )
+    return cbar
 
 
 def plot_2d_density_diff(
@@ -762,23 +848,8 @@ def plot_2d_density_diff(
         agent_tracking_df = tracking_df.query(agent.query)
         stim_names = agent_tracking_df.index.unique('stimulus_name')
 
-        # Create an empty axes to compute the control
-        ax_empty = add_axes(fig, 0, 0, 0, 0)
-
-        # Get control density histogram
-        if 'control' in stim_names:
-            control_df = agent_tracking_df.xs('control', level='stimulus_name')
-            n_fish_control = control_df.index.unique('experiment_ID').size
-            hb_control = ax_empty.hexbin(
-                control_df['x_position'], control_df['y_position'],
-                C=control_df['prob'] / n_fish_control * 100,  # Normalize by number of fish
-                reduce_C_function=np.sum,
-                gridsize=11, extent=(-6, 6, -6, 6),
-                linewidths=0
-            )
-            control_array = hb_control.get_array()
-        else:
-            control_array = None  # No control available
+        # Compute control density histogram for 2d density difference
+        control_array = compute_2d_density_control_ax(agent_tracking_df)
 
         # Loop over stimuli
         for i, stim_values in enumerate(stim_dict.values()):
@@ -802,41 +873,7 @@ def plot_2d_density_diff(
             stim_df = agent_tracking_df.xs(stim_name, level='stimulus_name')
             n_fish_stim = stim_df.index.unique('experiment_ID').size
 
-            # Compute hexagonal histogram for the stimulus
-            hb_stim = ax.hexbin(
-                stim_df['x_position'], stim_df['y_position'],
-                C=stim_df['prob'] / n_fish_stim * 100,  # Normalize by number of fish
-                reduce_C_function=np.sum,
-                gridsize=11, extent=(-6, 6, -6, 6),
-                linewidths=0
-            )
-            stim_array = hb_stim.get_array()
-
-            # The outermost hexagons only include half of the data,
-            # so we set their values to nan to avoid misinterpretation
-            hex_x, hex_y = hb_stim.get_offsets().T  # Extract (x, y) centers of hexagons
-            radii = np.sqrt(hex_x ** 2 + hex_y ** 2)
-            stim_array[radii >= 5] = np.nan
-
-            # Compute density difference if control exists
-            if control_array is not None:
-                density_diff = stim_array - control_array  # Both already normalized
-                hb_stim.set_array(density_diff)
-            else:
-                hb_stim.set_array(stim_array)
-
-            # Print vmin and vmax
-            if isinstance(vmax, type(None)):
-                hb_vmin = hb_stim.get_array().min()
-                hb_vmax = hb_stim.get_array().max()
-                hb_vmean = hb_stim.get_array().mean()
-                print(f"{agent.name} | {stim_name} \t: vmin: {hb_vmin:.2f} | vmax: {hb_vmax:.2f} | vmean: {hb_vmean:.2f}")
-
-            hb_stim.set_clim(vmin, vmax)
-            hb_stim.set_cmap(cmap)
-            ax.set_aspect('equal')
-            hide_all_spines_and_ticks(ax)
-            set_ticks(ax, x_ticks=[], y_ticks=[])
+            plot_2d_density_diff_ax(ax, stim_df, n_fish_stim, control_array, vmin=vmin, vmax=vmax, cmap=cmap)
 
     fig.suptitle(
         f'{agents[0].cmap.name}, {agents[1].cmap.name} | vmin: {vmin:.1f} | vmax: {vmax:.1f}',
@@ -896,7 +933,7 @@ def plot_chance_level(
     #     )
 
 
-def _plot_1d_density(
+def plot_1d_density_ax(
         ax,
         agents, stim_name, stim_values, do_subtract,
         # Will be retrieved via eval
@@ -1092,7 +1129,7 @@ def plot_1d_density(
             ax = add_axes(fig, l, b, w, h)
             ax.set_title(stim_name)  # Add stimulus name for quick reference
 
-            _plot_1d_density(
+            plot_1d_density_ax(
                 ax, agents, stim_name, stim_values, do_subtract,
                 x_df, radius_df, azimuth_df,
                 x_ind_df, radius_ind_df, azimuth_ind_df,
@@ -1156,7 +1193,7 @@ def plot_1d_density_all_bins(
                     'bin_name': bin_name, 'bin_label': bin_label,
                     'ticks': ticks, 'ticklabels': tick_labels,
                 }
-                _plot_1d_density(
+                plot_1d_density_ax(
                     ax, agents, stim_name, stim_values, do_subtract,
                     x_df, radius_df, azimuth_df,
                     x_ind_df, radius_ind_df, azimuth_ind_df,
@@ -1233,7 +1270,7 @@ def plot_1d_density_fig_s1(
             'bin_name': bin_name, 'bin_label': bin_label,
             'ticks': ticks, 'ticklabels': tick_labels,
         }
-        _plot_1d_density(
+        plot_1d_density_ax(
             ax, agents, stim_name, stim_values, do_subtract,
             x_df, radius_df, azimuth_df,
             x_ind_df, radius_ind_df, azimuth_ind_df,
@@ -1277,7 +1314,7 @@ def plot_1d_density_fig_s1(
                 'bin_name': bin_name, 'bin_label': bin_label,
                 'ticks': ticks, 'ticklabels': tick_labels,
             }
-            _plot_1d_density(
+            plot_1d_density_ax(
                 ax, agents, stim_name, stim_values, do_subtract,
                 x_df, radius_df, azimuth_df,
                 x_ind_df, radius_ind_df, azimuth_ind_df,
@@ -1299,6 +1336,122 @@ def plot_1d_density_fig_s1(
     return fig
 
 
+def _prepare_bin_stats_plot(
+    mean_ind_df, stim_values, agents,
+):
+    agent_str = ' vs '.join([agent.name for agent in agents])
+
+    # Extract stimulus settings
+    stim_name = stim_values['stim_name']
+    column_name = stim_values['column_name']
+    bin_name = stim_values['bin_name']
+    bin_label = stim_values['bin_label_avg']
+    ref_line = stim_values.get('ref_line', None)
+
+    if 'larva' in agent_str or 'juvie' in agent_str:
+        ticks = stim_values['ticks']
+        ticklabels = stim_values['ticklabels']
+        if bin_name == 'azimuth_bin':
+            # To properly represent the azimuth positions, we use the weighted
+            # histogram of the azimuthal values based on a cosine projection.
+            ticks = [-3, 0, 3]
+            ticklabels = ticks
+            ref_line = 0
+    # Zoomed in for agents
+    elif bin_name == 'x_bin':
+        ticks, ticklabels = [-2, 0, 2], [-2, 0, 2]
+    elif bin_name == 'azimuth_bin':
+        ticks, ticklabels = [-1, 0, 1], [-1, 0, 1]
+        ref_line = 0
+    elif bin_name == 'radius_bin':
+        ticks, ticklabels = [3, 4, 5], [3, 4, 5]
+    else:
+        raise ValueError(f"Bin name '{bin_name}' not recognized. "
+                         f"Expected 'x_bin', 'azimuth_bin', or 'radius_bin'.")
+
+    # Prepare data for plotting ###########################################
+    # Mean within fish
+    plot_df = mean_ind_df.reset_index()  # Reset index for easier filtering
+    plot_df = plot_df[plot_df['stimulus_name'].isin([stim_name, 'control'])]  # Keep only the relevant stimuli
+    plot_df['group'] = ''  # Add group column
+    # # Assign groups, stimulus order and color
+    palette_dict = {}
+    stim_order = []
+    counter = 0  # ensure unique groups in desired order
+    for agent in agents:
+        for current_stim_name in ['control', stim_name]:
+            group_name = f"{counter} {agent.name} {current_stim_name}"
+            stim_order.append(group_name)
+            # Get rows corresponding to mean_ind_df.query(agent.query).xs(stim_name, level='stimulus_name')
+            rows = plot_df.query(agent.query).query(
+                f"'{current_stim_name}' in stimulus_name")  # xs(current_stim_name, level='stimulus_name', drop_level=False)
+            plot_df.loc[rows.index, 'group'] = group_name
+            if current_stim_name == 'control':
+                palette_dict[group_name] = COLOR_ANNOT
+            else:
+                palette_dict[group_name] = agent.color
+            counter += 1
+    # Ensure correct ordering
+    stim_order[-2:] = stim_order[-2:][::-1]  # Trick to swap last two values of stim order: get second control last
+    # stim_order = stim_order[::-1]  # Reverse order to have larvae on top
+    plot_df['group'] = pd.Categorical(plot_df['group'], categories=stim_order, ordered=True)
+
+    return plot_df, palette_dict, ticks, ticklabels, ref_line
+
+
+def plot_bin_stats_stripplot_ax(ax, mean_ind_df, stat_df, agents, stim_values):
+
+    # Extract stimulus settings
+    stim_name = stim_values['stim_name']
+    column_name = stim_values['column_name']
+    bin_label = stim_values['bin_label_avg']
+    plot_df, palette_dict, ticks, ticklabels, ref_line = _prepare_bin_stats_plot(
+        mean_ind_df, stim_values, agents,
+    )
+
+    # Stripplot ###########################################################
+    strip = sns.stripplot(
+        data=plot_df,
+        x='group', y=column_name,  # Use 'group' to show all four categories
+        hue='group', palette=palette_dict, alpha=ALPHA, size=MARKER_SIZE,
+        marker=MARKER_HOLLOW,
+        dodge=False, legend=False,
+        ax=ax
+    )
+
+    # Add statistics
+    # # Compare stim and control
+    p_value_agent1 = p_value_to_stars(stat_df.query(
+        f"stim0 == '{stim_name}' and stim1 == 'control' and agent0 == '{agents[1].name}' and agent1 == '{agents[1].name}'"
+    )['M_p_value'].values[0])
+    # # Compare stim between agents
+    p_value_stim = p_value_to_stars(stat_df.query(
+        f"stim0 == '{stim_name}' and stim1 == '{stim_name}' and agent0 == '{agents[0].name}' and agent1 == '{agents[1].name}'"
+    )['M_p_value'].values[0])
+    # # Compare stim and control
+    p_value_agent0 = p_value_to_stars(stat_df.query(
+        f"stim0 == '{stim_name}' and stim1 == 'control' and agent0 == '{agents[0].name}' and agent1 == '{agents[0].name}'"
+    )['M_p_value'].values[0])
+
+    # x-coordinates in dataspace, y-coordinates in axes space
+    add_stats(ax, 0, 1, ANNOT_Y, p_value_agent0)
+    add_stats(ax, 1, 2, ANNOT_Y_HIGH, p_value_stim)
+    add_stats(ax, 2, 3, ANNOT_Y, p_value_agent1)
+
+    # Format
+    set_axlines(ax, axhlines=ref_line)
+    hide_spines(ax, ['top', 'right', 'bottom'])
+    # Format property axis
+    ax.set_ylabel(bin_label)
+    set_ticks(ax, y_ticks=ticks, y_ticklabels=ticklabels)
+    set_bounds(ax, y=(ticks[0], ticks[-1]))
+    set_lims(ax, y=(ticks[0], ticks[-1]))
+    # Format age axis
+    set_labels(ax, x='')
+    set_ticks(ax, x_ticks=[])
+    set_lims(ax, x=[-0.5, 3.5])  # Ensure all dots are visible
+
+
 def plot_bin_stats(
         mean_ind_df, stat_df, agents, stim_dict,
         ax_x_cm=4, ax_y_cm=3,
@@ -1310,56 +1463,6 @@ def plot_bin_stats(
 
     # Loop over stimuli, plot agents in same plot
     for i, stim_values in enumerate(stim_dict.values()):
-        # Extract stimulus settings
-        stim_name = stim_values['stim_name']
-        column_name = stim_values['column_name']
-        bin_name = stim_values['bin_name']
-        bin_label = stim_values['bin_label_avg']
-        ref_line = stim_values.get('ref_line', None)
-        if 'larva' in agent_str or 'juvie'in agent_str:
-            ticks = stim_values['ticks']
-            ticklabels = stim_values['ticklabels']
-            if bin_name == 'azimuth_bin':
-                # To properly represent the azimuth positions, we use the weighted
-                # histogram of the azimuthal values based on a cosine projection.
-                ticks = [-3, 0, 3]
-                ticklabels = ticks
-                ref_line = 0
-        # Zoomed in for agents
-        elif bin_name == 'x_bin':
-            ticks, ticklabels = [-2, 0, 2], [-2, 0, 2]
-        elif bin_name == 'azimuth_bin':
-            ticks, ticklabels = [-1, 0, 1], [-1, 0, 1]
-            ref_line = 0
-        elif bin_name == 'radius_bin':
-            ticks, ticklabels = [3, 4, 5], [3, 4, 5]
-
-        # Prepare data for plotting ###########################################
-        # Mean within fish
-        plot_df = mean_ind_df.reset_index()  # Reset index for easier filtering
-        plot_df = plot_df[plot_df['stimulus_name'].isin([stim_name, 'control'])]  # Keep only the relevant stimuli
-        plot_df['group'] = ''  # Add group column
-        # # Assign groups, stimulus order and color
-        palette_dict = {}
-        stim_order = []
-        counter = 0  # ensure unique groups in desired order
-        for agent in agents:
-            for current_stim_name in ['control', stim_name]:
-                group_name = f"{counter} {agent.name} {current_stim_name}"
-                stim_order.append(group_name)
-                # Get rows corresponding to mean_ind_df.query(agent.query).xs(stim_name, level='stimulus_name')
-                rows = plot_df.query(agent.query).query(
-                    f"'{current_stim_name}' in stimulus_name")  # xs(current_stim_name, level='stimulus_name', drop_level=False)
-                plot_df.loc[rows.index, 'group'] = group_name
-                if current_stim_name == 'control':
-                    palette_dict[group_name] = COLOR_ANNOT
-                else:
-                    palette_dict[group_name] = agent.color
-                counter += 1
-        # Ensure correct ordering
-        stim_order[-2:] = stim_order[-2:][::-1]  # Trick to swap last two values of stim order: get second control last
-        # stim_order = stim_order[::-1]  # Reverse order to have larvae on top
-        plot_df['group'] = pd.Categorical(plot_df['group'], categories=stim_order, ordered=True)
 
         # Stripplot ###########################################################
         # Add axes
@@ -1372,48 +1475,17 @@ def plot_bin_stats(
         )
         ax = add_axes(fig, l, b, w, h)
 
-        strip = sns.stripplot(
-            data=plot_df,
-            x='group', y=column_name,  # Use 'group' to show all four categories
-            hue='group', palette=palette_dict, alpha=ALPHA, size=MARKER_SIZE,
-            marker=MARKER_HOLLOW,
-            dodge=False, legend=False,  # jitter=jitter,
-            ax=ax
-        )
-
-        # Add statistics
-        # # Compare stim and control
-        p_value_agent1 = p_value_to_stars(stat_df.query(
-            f"stim0 == '{stim_name}' and stim1 == 'control' and agent0 == '{agents[1].name}' and agent1 == '{agents[1].name}'"
-            )['M_p_value'].values[0])
-        # # Compare stim between agents
-        p_value_stim = p_value_to_stars(stat_df.query(
-            f"stim0 == '{stim_name}' and stim1 == '{stim_name}' and agent0 == '{agents[0].name}' and agent1 == '{agents[1].name}'"
-            )['M_p_value'].values[0])
-        # # Compare stim and control
-        p_value_agent0 = p_value_to_stars(stat_df.query(
-            f"stim0 == '{stim_name}' and stim1 == 'control' and agent0 == '{agents[0].name}' and agent1 == '{agents[0].name}'"
-            )['M_p_value'].values[0])
-
-        # x-coordinates in dataspace, y-coordinates in axes space
-        add_stats(ax, 0, 1, ANNOT_Y, p_value_agent0)
-        add_stats(ax, 1, 2, ANNOT_Y_HIGH, p_value_stim)
-        add_stats(ax, 2, 3, ANNOT_Y, p_value_agent1)
-
-        # Format
-        set_axlines(ax, axhlines=ref_line)
-        hide_spines(ax, ['top', 'right', 'bottom'])
-        # Format property axis
-        ax.set_ylabel(bin_label)
-        set_ticks(ax, y_ticks=ticks, y_ticklabels=ticklabels)
-        set_bounds(ax, y=(ticks[0], ticks[-1]))
-        set_lims(ax, y=(ticks[0], ticks[-1]))
-        # Format age axis
-        set_labels(ax, x='')
-        set_ticks(ax, x_ticks=[])
-        set_lims(ax, x=[-0.5, 3.5])  # Ensure all dots are visible
+        plot_bin_stats_stripplot_ax(ax, mean_ind_df, stat_df, agents, stim_values)
 
         # Histograms ##########################################################
+        # Extract stimulus settings
+        stim_name = stim_values['stim_name']
+        column_name = stim_values['column_name']
+        bin_label = stim_values['bin_label_avg']
+        plot_df, palette_dict, ticks, ticklabels, ref_line = _prepare_bin_stats_plot(
+            mean_ind_df, stim_values, agents,
+        )
+
         for k, agent in enumerate(agents):
             # Add axes
             j = 0  # assign row
@@ -1515,7 +1587,7 @@ def plot_midline_stats(
 
             # Fit a linear regression and get correlation
             slope, intercept, r_value, p_value, _ = linregress(agent_df['midline_length'], agent_df[column_name])
-            res_dict[agent.name] = (r_value, p_value)
+            res_dict[agent.label] = (r_value, p_value)
 
             # Plot regression line
             x_vals = np.linspace(agent_df['midline_length'].min(), agent_df['midline_length'].max(), 100)
@@ -1552,6 +1624,12 @@ def plot_midline_stats(
     return fig
 
 
+def plot_stimulus_ax(ax, stim_name, nbins=256, r_max=6, c_min=0, c_mid=300, c_max=310, vmin=0, vmax=350):
+    px, xs, ys = get_stim_arena_locked(stim_name, nbins, r_max, c_min, c_mid, c_max)
+    ax.imshow(px, extent=[-6, 6, -6, 6], cmap='gray', origin='lower', vmin=vmin, vmax=vmax)
+    hide_all_spines_and_ticks(ax)
+
+
 def plot_stimuli(stim_dict, ax_x_cm=2, ax_y_cm=2, x_offset=0.2):
     fig = create_figure(fig_height=pad_y_cm + ax_y_cm)
     j = 0   # assign row
@@ -1560,7 +1638,6 @@ def plot_stimuli(stim_dict, ax_x_cm=2, ax_y_cm=2, x_offset=0.2):
     for i, stim_values in enumerate(stim_dict.values()):
         # Extract stimulus settings
         stim_name = stim_values['stim_name']
-        px, xs, ys = get_stim_arena_locked(stim_name, 256, 6, 0, 300, 310)
 
         # Add axes
         l, b, w, h = (
@@ -1571,8 +1648,7 @@ def plot_stimuli(stim_dict, ax_x_cm=2, ax_y_cm=2, x_offset=0.2):
         )
         ax = add_axes(fig, l, b, w, h)
 
-        ax.imshow(px, extent=[-6, 6, -6, 6], cmap='gray', origin='lower', vmin=0, vmax=350)
-        hide_all_spines_and_ticks(ax)
+        plot_stimulus_ax(ax, stim_name)
 
     return fig
 

@@ -71,22 +71,22 @@ ref_azimuth_df, ref_azimuth_ind_df = compute_swim_properties_tracking(ref_tracki
 # #############################################################################
 # Plot trajectories, 1D and 2D density
 # #############################################################################
-# Plot trajectories ###########################################################
-plot_all_trajectories(full_ref_tracking_df, ref_agents, stim_dict, path_to_fig_folder)
-for k, (agent, exp_ID) in enumerate(zip([Larva(), Juvie()], [100, 433])):
-    fig = plot_exp_trajectories(full_ref_tracking_df.xs(exp_ID, level='experiment_ID').query(agent.query), agent, stim_dict, k)
-    savefig(fig, path_to_fig_folder.joinpath('trajectories', 'examples', f'trajectory_{agent.name}.png'), close_fig=False)
-    savefig(fig, path_to_fig_folder.joinpath('trajectories', 'examples', f'trajectory_{agent.name}.pdf'), close_fig=True)
-
-# Plot 2D density hexbins #####################################################
-fig, cbars = plot_2d_density(ref_tracking_df, ref_agents, stim_dict, vmin=ref_vmin, vmax=ref_vmax)
-savefig(fig, path_to_fig_folder.joinpath('2D_density', f'2D_{ref_agents_str}.pdf'), close_fig=True)
-savefig(cbars[0], path_to_fig_folder.joinpath('cbar', f'2D_{ref_agents[0].name}.pdf'), close_fig=True)
-savefig(cbars[1], path_to_fig_folder.joinpath('cbar', f'2D_{ref_agents[1].name}.pdf'), close_fig=True)
-# Plot 2D density difference hexbins
-fig, cbar = plot_2d_density_diff(ref_tracking_df, ref_agents, stim_dict, vmin=-1, vmax=1)
-savefig(fig, path_to_fig_folder.joinpath('2D_density_dff', f'2D_diff_{ref_agents_str}.pdf'), close_fig=True)
-savefig(cbar, path_to_fig_folder.joinpath('cbar', f'2D_diff_{ref_agents_str}.pdf'), close_fig=True)
+# # Plot trajectories ###########################################################
+# plot_all_trajectories(full_ref_tracking_df, ref_agents, stim_dict, path_to_fig_folder)
+# for k, (agent, exp_ID) in enumerate(zip([Larva(), Juvie()], [100, 433])):
+#     fig = plot_exp_trajectories(full_ref_tracking_df.xs(exp_ID, level='experiment_ID').query(agent.query), agent, stim_dict, k)
+#     savefig(fig, path_to_fig_folder.joinpath('trajectories', 'examples', f'trajectory_{agent.name}.png'), close_fig=False)
+#     savefig(fig, path_to_fig_folder.joinpath('trajectories', 'examples', f'trajectory_{agent.name}.pdf'), close_fig=True)
+#
+# # Plot 2D density hexbins #####################################################
+# fig, cbars = plot_2d_density(ref_tracking_df, ref_agents, stim_dict, vmin=ref_vmin, vmax=ref_vmax)
+# savefig(fig, path_to_fig_folder.joinpath('2D_density', f'2D_{ref_agents_str}.pdf'), close_fig=True)
+# savefig(cbars[0], path_to_fig_folder.joinpath('cbar', f'2D_{ref_agents[0].name}.pdf'), close_fig=True)
+# savefig(cbars[1], path_to_fig_folder.joinpath('cbar', f'2D_{ref_agents[1].name}.pdf'), close_fig=True)
+# # Plot 2D density difference hexbins
+# fig, cbar = plot_2d_density_diff(ref_tracking_df, ref_agents, stim_dict, vmin=-1, vmax=1)
+# savefig(fig, path_to_fig_folder.joinpath('2D_density_dff', f'2D_diff_{ref_agents_str}.pdf'), close_fig=True)
+# savefig(cbar, path_to_fig_folder.joinpath('cbar', f'2D_diff_{ref_agents_str}.pdf'), close_fig=True)
 
 # Plot agents separately and together
 figs1 = plot_1d_density(ref_agents[0], stim_dict, ref_x_df, ref_radius_df, ref_azimuth_df)
@@ -181,7 +181,7 @@ stats_df.to_hdf(path_to_stats_file, key=ref_agents_str, mode='a')
 for agent_genotype in agent_genotypes:
     larva_agent = LarvaAgent()
     juvie_agent = JuvieAgent()
-    if not agent_genotype == 'best':
+    if not agent_genotype == 'model_ptAV_plST_aAV_tAV_sAV':
         # Overwrite agent class for this genotype
         larva_agent_name = f'{agent_genotype}_05dpf'
         larva_agent.name = larva_agent_name
@@ -232,7 +232,7 @@ for agent_genotype in agent_genotypes:
     # #########################################################################
     # Plot trajectories, 1D and 2D density
     # #########################################################################
-    if agent_genotype == 'A_DC_A_A_A':  # Proposed model
+    if agent_genotype == 'model_ptAV_plST_aAV_tAV_sAV':  # Proposed model
         # Plot trajectories ###################################################
         plot_all_trajectories(full_test_tracking_df, test_agents, stim_dict, path_to_fig_folder)
         for k, (agent, exp_ID) in enumerate(zip(test_agents, [3, 14])):

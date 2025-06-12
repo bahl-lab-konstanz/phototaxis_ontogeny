@@ -380,6 +380,7 @@ def plot_fitted_pars(
                 data_lim = [-data_max, data_max]
             data_bins = np.linspace(data_lim[0], data_lim[1], 10)  # Even number to include 0 bin
 
+            # data_ticks = prop_class.par_tick_dict.get(meta_par_name, None)  # TODO: Implement
             data_ticks = np.round(np.linspace(data_lim[0], data_lim[1], 5), 3)
             if 'lux/s' in label:
                 data_ticklabels = data_ticks
