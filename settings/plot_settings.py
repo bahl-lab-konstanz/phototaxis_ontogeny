@@ -110,8 +110,10 @@ ANNOT_Y, ANNOT_Y_HIGH = 1, 1.15  # Height of annotation lines (in axes coordinat
 MARKER_HOLLOW = r'$\circ$'
 
 # # Text
-plt.rcParams['pdf.fonttype'] = 42  #
+plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams['ps.fonttype'] = 42
+plt.rcParams["font.family"] = "sans-serif"
+plt.rcParams["font.sans-serif"] = ["Arial"]
 plt.rc('font', size=SMALL_SIZE)         # controls default text sizes
 plt.rc('axes', titlesize=SMALL_SIZE)    # fontsize of the axes title
 plt.rc('axes', labelsize=SMALL_SIZE)    # fontsize of the x and y labels
@@ -119,8 +121,6 @@ plt.rc('xtick', labelsize=SMALL_SIZE)   # fontsize of the tick labels
 plt.rc('ytick', labelsize=SMALL_SIZE)   # fontsize of the tick labels
 plt.rc('legend', fontsize=SMALL_SIZE, frameon=False)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE) # fontsize of the figure title
-plt.rcParams["font.family"] = "sans-serif"
-plt.rcParams["font.sans-serif"] = ["Arial"]
 print("Using font:", plt.rcParams["font.sans-serif"])
 
 # # Lines

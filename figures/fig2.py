@@ -29,7 +29,7 @@ agents = [Larva(), Juvie()]
 agents_str = '_and_'.join([agent.name for agent in agents])
 
 # Paths
-path_to_fig_folder = path_to_main_fig_folder.joinpath(f'fig2_{stim_name}')
+path_to_fig_folder = path_to_main_fig_folder.joinpath(f'fig2')
 path_to_fig_folder.mkdir(exist_ok=True)
 hdf5_file = path_to_fig_folder.joinpath(f'fit_df_{stim_name}.hdf5')
 key_base = stim_name

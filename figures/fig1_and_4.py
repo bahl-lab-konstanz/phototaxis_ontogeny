@@ -142,10 +142,11 @@ fig = plot_1d_density_fig_s1(ref_agents, stim_dict, ref_x_df, ref_radius_df, ref
 savefig(fig, path_to_fig_folder.joinpath('figS1', f'1D_{ref_agents_str}.pdf'), close_fig=True)
 
 # Separate plot for figure 2
+path_to_fig2_folder = path_to_main_fig_folder.joinpath('fig2')
 figs4 = plot_1d_density(ref_agents, stim_dict_fig2, ref_x_df, ref_radius_df, ref_azimuth_df, ref_stim_name='azimuth_left_dark_right_bright')
-savefig(figs4[0], path_to_fig_folder.joinpath('fig2', f'1D_{ref_agents_str}.pdf'), close_fig=True)
-savefig(figs4[1], path_to_fig_folder.joinpath('fig2', f'1D_{ref_agents_str}_control.pdf'), close_fig=True)
-savefig(figs4[2], path_to_fig_folder.joinpath('fig2', f'1D_{ref_agents_str}_chance.pdf'), close_fig=True)
+savefig(figs4[0], path_to_fig2_folder.joinpath('2B', f'1D_{ref_agents_str}.pdf'), close_fig=True)
+savefig(figs4[1], path_to_fig2_folder.joinpath('2B', f'1D_{ref_agents_str}_control.pdf'), close_fig=True)
+savefig(figs4[2], path_to_fig2_folder.joinpath('2B', f'1D_{ref_agents_str}_chance.pdf'), close_fig=True)
 
 # #############################################################################
 # Statistics

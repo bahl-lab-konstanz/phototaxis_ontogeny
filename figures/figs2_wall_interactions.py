@@ -98,6 +98,6 @@ for row_num, (axs, agent) in enumerate(zip(axes, agents)):
     set_ticks(axes, x_ticks=np.arange(-100, 101, 100))
     set_lims_and_bounds(axes, x=[-100, 100])
 fig.supxlabel(f'{prop_class.label} ({prop_class.unit})')
-savefig(fig, path_to_fig_folder.joinpath('orientation_change_dist_with_radius.pdf'), close_fig=False)
+savefig(fig, path_to_fig_folder.joinpath('orientation_change_dist_with_radius.pdf'), close_fig=True)
 
 
