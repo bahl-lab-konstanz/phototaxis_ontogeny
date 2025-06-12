@@ -77,7 +77,8 @@ class LarvaAgent(Agent):
             name='model_ptAV_plST_aAV_tAV_sAV_05dpf', label='Larvae (agent)', label_single='Single larva (agent)',
             query='fish_age <= 5 and fish_genotype == "model_ptAV_plST_aAV_tAV_sAV"',
             ref_agent_str='sim', ref_agent=Larva(),  # show larva as reference
-            color=color_larva_agent, markerfacecolor=COLOR_AGENT_MARKER, color_accent=color_larva_accent,
+            color=color_larva_agent, marker=MARKER_HOLLOW,
+            markerfacecolor=COLOR_AGENT_MARKER, color_accent=color_larva_accent,
             cmap=CMAP_LARVA_AGENT, palette=palette_larva,
         )
 
@@ -88,7 +89,8 @@ class JuvieAgent(Agent):
             name='model_ptAV_plST_aAV_tAV_sAV_27dpf', label='Juveniles (agent)', label_single='Single juvenile (agent)',
             query='fish_age >= 21 and fish_genotype == "model_ptAV_plST_aAV_tAV_sAV"',
             ref_agent_str='sim', ref_agent=Juvie(),  # show juvie as reference
-            color=color_juvie_agent, markerfacecolor=COLOR_AGENT_MARKER, color_accent=color_juvie_accent,
+            color=color_juvie_agent, marker=MARKER_HOLLOW,
+            markerfacecolor=COLOR_AGENT_MARKER, color_accent=color_juvie_accent,
             cmap=CMAP_JUVIE_AGENT, palette=palette_juvie,
         )
 

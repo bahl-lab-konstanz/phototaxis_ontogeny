@@ -418,7 +418,7 @@ def plot_fitted_pars(
             sns.stripplot(  # Individual fits
                 data=ind_prop_fit_df.reset_index(), x='fish_age', y=meta_par_name,
                 hue='fish_age', palette=AGE_PALETTE_DICT, alpha=ALPHA, size=MARKER_SIZE,
-                marker=MARKER_HOLLOW, dodge=False, jitter=jitter,
+                marker=agents[0].marker, dodge=False, jitter=jitter,
                 ax=ax, legend=False,
             )
             sns.stripplot(  # Add mean fit

@@ -17,7 +17,7 @@ path_to_fig_folder = path_to_main_fig_folder.joinpath(f'fig1_{experiment_name}')
 # Specify agents (comment out either Larva/Juvie or LarvaAgent/JuvieAgent)
 agents = [Larva(), Juvie()]
 vmin, vmax = ref_vmin, ref_vmax
-vmin_diff, vmax_diff = -1, 1
+vmin_diff, vmax_diff = -0.8, 0.8
 example_IDs = [100, 433]  # Larva, Juvie
 
 # agents = [LarvaAgent(), JuvieAgent()]

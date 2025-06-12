@@ -187,7 +187,7 @@ for num, (ax, meta_par_name) in enumerate(zip(axs, par_names)):
     sns.stripplot(  # Individual fits
         data=ind_meta_popt.reset_index(), x='fish_age', y=meta_par_name,
         hue='fish_age', palette=AGE_PALETTE_DICT, alpha=ALPHA, size=MARKER_SIZE,
-        marker=MARKER_HOLLOW,
+        marker='o',
         dodge=True, jitter=jitter,
         label='Bootstrapped', legend=False,
         ax=ax

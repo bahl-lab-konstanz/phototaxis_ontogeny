@@ -1409,12 +1409,15 @@ def plot_bin_stats_stripplot_ax(ax, mean_ind_df, stat_df, agents, stim_values):
         mean_ind_df, stim_values, agents,
     )
 
+    # Set marker type based on first agent
+    marker = agents[0].marker
+
     # Stripplot ###########################################################
     strip = sns.stripplot(
         data=plot_df,
         x='group', y=column_name,  # Use 'group' to show all four categories
         hue='group', palette=palette_dict, alpha=ALPHA, size=MARKER_SIZE,
-        marker=MARKER_HOLLOW,
+        marker=marker,
         dodge=False, legend=False,
         ax=ax
     )
