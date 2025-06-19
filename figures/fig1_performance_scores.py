@@ -14,7 +14,7 @@ path_name = experiment_name
 
 path_to_fig_folder = path_to_main_fig_folder.joinpath(f'fig1_{experiment_name}')
 path_to_fig_folder.mkdir(exist_ok=True)
-path_to_stats_file = path_to_fig_folder.joinpath(f'stats.hdf5')
+path_to_stats_file = path_to_fig_folder.joinpath(f'stats_250612.hdf5')
 
 # Agents
 ref_agents = [Larva(), Juvie()]
@@ -60,6 +60,12 @@ for agent_name in agent_mapping.keys():
                 pd.read_hdf(path_to_stats_file, key=agent_name + age_str),
             ])
         except Exception as e:
+            if agent_name == agent_base_norm:
+                raise ValueError(
+                    f"Error loading data for {agent_name}{age_str}: {e}. "
+                    "Ensure the agent_base_norm is correctly specified."
+                )
+            # If the agent is not found, skip it
             print(f"Error loading data for {agent_name}{age_str}: {e}")
             continue
 

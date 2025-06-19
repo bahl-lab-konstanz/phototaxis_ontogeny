@@ -14,7 +14,7 @@ path_name = experiment_name
 
 
 path_to_fig_folder = path_to_main_fig_folder.joinpath(f'fig1_{experiment_name}')
-path_to_stats_file = path_to_fig_folder.joinpath(f'stats.hdf5')
+path_to_stats_file = path_to_fig_folder.joinpath(f'stats_250612.hdf5')
 path_to_stats_txt = path_to_fig_folder.joinpath('stats.txt')
 
 

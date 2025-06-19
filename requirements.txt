@@ -2,7 +2,7 @@ h5py>=3.12.0
 keyring>=25.6
 matplotlib>=3.10.3
 numba>=0.61.2
-numpy==2.2.0  # Numba needs NumPy 2.2 or less
+numpy>=2.1.0  # Numba needs NumPy 2.2 or less
 pandas>=2.3.0
 scipy>=1.15.0
 seaborn>=0.13.2

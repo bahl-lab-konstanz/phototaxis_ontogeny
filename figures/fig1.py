@@ -13,6 +13,8 @@ from utils.general_utils import load_tracking_df
 experiment_name = 'arena_locked'
 path_name = experiment_name
 path_to_fig_folder = path_to_main_fig_folder.joinpath(f'fig1_{experiment_name}')
+path_to_stats_txt = path_to_fig_folder.joinpath('main/stats.txt')
+
 
 # Specify agents (comment out either Larva/Juvie or LarvaAgent/JuvieAgent)
 agents = [Larva(), Juvie()]
@@ -20,10 +22,10 @@ vmin, vmax = ref_vmin, ref_vmax
 vmin_diff, vmax_diff = -0.8, 0.8
 example_IDs = [100, 433]  # Larva, Juvie
 
-# agents = [LarvaAgent(), JuvieAgent()]
-# vmin, vmax = test_vmin, test_vmax
-# vmin_diff, vmax_diff = -0.4, 0.4
-# example_IDs = [[44, 44, 92, 92], [62, 93, 87, 55]]   # Larval agent, Juvenile agent
+agents = [LarvaAgent(), JuvieAgent()]
+vmin, vmax = test_vmin, test_vmax
+vmin_diff, vmax_diff = -0.4, 0.4
+example_IDs = [[44, 44, 92, 92], [62, 93, 87, 55]]   # Larval agent, Juvenile agent
 
 agents_str = '_'.join([agent.name for agent in agents])
 
@@ -235,6 +237,9 @@ print(f"Plotting 1D density bins: \033[92mdone\033[0m")
 # Plot statistics based on mean within fish ###################################
 print("Computing statistics:", end='')
 bin_stats_list, stat_df, stat_str = get_bin_stats(median_ind_df, agents, stim_dict)
+# Store statistics txt file
+with open(path_to_stats_txt, 'a+') as output:
+    output.write(stat_str)
 print(f"\033[92mdone\033[0m")
 
 # Loop over stimuli

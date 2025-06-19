@@ -755,7 +755,7 @@ def plot_2d_density(
 
             # We sum all probabilities normalized within fish and then divide by n_fish
             n_fish_stim = stim_df.index.unique('experiment_ID').size
-            cbar = plot_2d_density_ax(ax, stim_df, n_fish_stim, agent, stim_values, vmin=vmin, vmax=vmax)
+            cbar = plot_2d_density_ax(ax, stim_df, n_fish_stim, agent, vmin=vmin, vmax=vmax)
         cbars.append(cbar)  # Store one colorbar per agent
 
     fig.suptitle(
