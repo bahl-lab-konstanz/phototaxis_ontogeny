@@ -1,7 +1,6 @@
 # Standard library imports
 import datetime
 import os
-import random
 from pathlib import Path
 
 # Third party library imports
