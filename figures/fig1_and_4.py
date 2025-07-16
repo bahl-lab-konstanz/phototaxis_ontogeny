@@ -35,7 +35,7 @@ agent_genotypes = [
     # 'B_C_B_B_B',
     # 'B_D_B_B_B',
     # 'B_DC_B_B_B',
-    'model_ptAV_plST_aAV_tAV_sAV',
+    # 'model_ptAV_plST_aAV_tAV_sAV',
     # 'model_ptT_plT_aT_tT_sT',
     # 'DA_DA_DA_DA_DA',
     # 'superfit',
