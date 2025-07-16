@@ -121,7 +121,6 @@ plt.rc('xtick', labelsize=SMALL_SIZE)   # fontsize of the tick labels
 plt.rc('ytick', labelsize=SMALL_SIZE)   # fontsize of the tick labels
 plt.rc('legend', fontsize=SMALL_SIZE, frameon=False)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE) # fontsize of the figure title
-print("Using font:", plt.rcParams["font.sans-serif"])
 
 # # Lines
 plt.rcParams['lines.markersize'] = MARKER_SIZE

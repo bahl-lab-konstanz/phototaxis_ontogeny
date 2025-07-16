@@ -10,7 +10,7 @@ from settings.prop_settings import *
 # User settings
 # #############################################################################
 # Plot for presentations or print
-do_presentation = False
+do_presentation = True
 
 # Specify the main folder name
 main_folder_name = 'capelle_et_al'

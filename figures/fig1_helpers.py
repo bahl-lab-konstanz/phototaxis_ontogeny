@@ -1552,6 +1552,7 @@ def plot_midline_stats(
     for i, stim_values in enumerate(stim_dict.values()):
         # Extract stimulus settings
         stim_name = stim_values['stim_name']
+        stim_label = stim_values['stim_label']
         column_name = stim_values['column_name']
         bin_name = stim_values['bin_name']
         bin_label = stim_values['bin_label_avg']
@@ -1599,7 +1600,7 @@ def plot_midline_stats(
 
         # Create axis title with R and p values
         title_text = "\n".join([f"{name}: R={r:.2f}, p={p:.3g}" for name, (r, p) in res_dict.items()])
-        ax.set_title(f"{stim_name}\n{title_text}")
+        ax.set_title(f"{stim_label}\n{title_text}")
 
         # Scatter plot ########################################################
         sns.scatterplot(

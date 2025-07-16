@@ -30,7 +30,7 @@ hdf5_file = path_to_fig_folder.joinpath(f'fit_df_{model.name}.hdf5')
 # #############################################################################
 from fig2_helpers import *
 stim_name = 'azimuth_left_dark_right_bright_virtual_yes'
-path_to_fig2_data = path_to_main_fig_folder.joinpath(f'fig2_{stim_name}').joinpath(f'analysed_data_{stim_name}.hdf5')
+path_to_fig2_data = path_to_main_fig_folder.joinpath(f'fig2').joinpath(f'analysed_data_{stim_name}.hdf5')
 fig2_df = pd.read_hdf(path_to_fig2_data, key='all_bout_data_pandas_event')
 
 # Remove wall interactions ####################################################
