@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 plt.ion()  # Enable interactive mode
 
 # # Local library imports
-from settings.general_settings import do_presentation
+from settings.general_settings import document_type
 
 # #############################################################################
 # Plot settings
 # #############################################################################
 # Presentation vs print settings ##############################################
-if do_presentation:
+if document_type == 'presentation':
     plt.style.use('dark_background')  # For presentations
     SMALL_SIZE = 6
     BIGGER_SIZE = 8
@@ -29,9 +29,23 @@ if do_presentation:
     COLOR_ANNOT = 'w'
     COLOR_MODEL = 'w'
     COLOR_AGENT_MARKER = 'k'    # same as background color
-else:
+elif document_type == 'paper':
     SMALL_SIZE = 6
     BIGGER_SIZE = 8
+    ALPHA = 0.3
+    CMAP_GREY = plt.get_cmap('Greys')  # cmaps.grayC     # black to white
+    CMAP_DIFF = plt.get_cmap('PiYG')
+    CMAP_LARVA = plt.get_cmap('Blues')
+    CMAP_JUVIE = plt.get_cmap('Oranges')
+    CMAP_LARVA_AGENT = CMAP_LARVA
+    CMAP_JUVIE_AGENT = plt.get_cmap('Reds')
+    COLOR_TEXT = 'k'
+    COLOR_ANNOT = 'k'
+    COLOR_MODEL = 'k'
+    COLOR_AGENT_MARKER = 'w'    # same as background color
+elif document_type == 'thesis':
+    SMALL_SIZE = 10
+    BIGGER_SIZE = 10
     ALPHA = 0.3
     CMAP_GREY = plt.get_cmap('Greys')  # cmaps.grayC     # black to white
     CMAP_DIFF = plt.get_cmap('PiYG')

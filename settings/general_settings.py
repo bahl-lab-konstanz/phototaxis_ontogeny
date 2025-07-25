@@ -10,7 +10,7 @@ from settings.prop_settings import *
 # User settings
 # #############################################################################
 # Plot for presentations or print
-do_presentation = True
+document_type = 'thesis'  # 'thesis', 'paper', or 'presentation'
 
 # Specify the main folder name
 main_folder_name = 'capelle_et_al'
@@ -95,10 +95,13 @@ else:
     raise ValueError("OS not recognized")
 
 # Create path to main figure folder
-if do_presentation:
+if document_type == 'presentation':
     path_to_main_fig_folder = path_to_main_folder.joinpath('black')
     path_to_main_fig_folder.mkdir(exist_ok=True)
-else:
+elif document_type == 'paper':
     path_to_main_fig_folder = path_to_main_folder.joinpath('white')
+    path_to_main_fig_folder.mkdir(exist_ok=True)
+elif document_type == 'thesis':
+    path_to_main_fig_folder = path_to_main_folder.joinpath('thesis')
     path_to_main_fig_folder.mkdir(exist_ok=True)
 
