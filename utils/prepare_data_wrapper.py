@@ -12,8 +12,8 @@ from .slack_helper import send_slack_message
 
 def prepare_data_wrapper(
     age_category, agent_name,
-    experiment_name, flip_dict, split_dict, label_dict,
-    included_stim_names,  # TODO: do we actually need this?
+    path_name, flip_dict, split_dict, label_dict,
+    included_stim_names=None,
     rolling_window=None, resampling_window=None,
     do_preprocess=False,
     do_tracking=False, do_event=True,
@@ -22,20 +22,20 @@ def prepare_data_wrapper(
 ):
 
     # Path to store prepared data
-    path_to_stim_folder = path_to_main_data_folder.joinpath(experiment_name)
+    path_to_stim_folder = path_to_main_data_folder.joinpath(path_name)
 
     # Path to experiment data
     if age_category == 'larva':
-        path_to_experiment_folders = path_to_larva_server_folder.joinpath(experiment_name)
+        path_to_experiment_folders = path_to_larva_server_folder.joinpath(path_name)
         path_to_agent_folder = path_to_stim_folder.joinpath('larva')
     elif age_category == 'juvie':
-        path_to_experiment_folders = path_to_juvie_server_folder.joinpath(experiment_name)
+        path_to_experiment_folders = path_to_juvie_server_folder.joinpath(path_name)
         path_to_agent_folder = path_to_stim_folder.joinpath('juvie')
     elif age_category == 'agents':
-        path_to_experiment_folders = path_to_agents_server_folder.joinpath(agent_name, experiment_name)
+        path_to_experiment_folders = path_to_agents_server_folder.joinpath(agent_name, path_name)
         path_to_agent_folder = path_to_stim_folder.joinpath(agent_name)
     elif age_category == 'simulations':
-        path_to_experiment_folders = path_to_sim_folder.joinpath('raw_data', agent_name, experiment_name)
+        path_to_experiment_folders = path_to_sim_folder.joinpath('raw_data', agent_name, path_name)
         path_to_agent_folder = path_to_stim_folder.joinpath(agent_name)
     else:
         raise NotImplementedError(f"age_category '{age_category}'")
@@ -75,7 +75,7 @@ def prepare_data_wrapper(
     # Print settings
     print(
         f"\033[1mPrepare data\033[0m"
-        f"\n\texperiment:   {experiment_name}"
+        f"\n\texperiment:   {path_name}"
         f"\n\ttracking:     {do_tracking}"
         f"\n\tevent:        {do_event}"
         f"\n\tto:           {path_to_agent_folder}"
@@ -105,8 +105,8 @@ def prepare_data_wrapper(
             path_to_analysed_folder=path_to_agent_folder,
             min_percentage_grating_left=0.5,
         )
-        # TODO: change after debugging
         included_experiment_IDs, excluded_experiment_IDs = prescreening.run()
+        # TODO: remove after debugging
         # excluded_experiment_IDs = None
     else:
         excluded_experiment_IDs = None
@@ -121,8 +121,8 @@ def prepare_data_wrapper(
         excluded_experiment_IDs=excluded_experiment_IDs,
         overwrite_output_file=False
     )
-    # TODO: change after debugging
     combined_event_df = combineData.run()
+    # TODO: remove after debugging
     # combined_event_df = pd.read_hdf(path_to_input_file, key="all_bout_data_pandas")
 
     # Sanity Check ################################################################
@@ -138,8 +138,8 @@ def prepare_data_wrapper(
             plot_statistics=True,
             do_overwrite=True,
         )
-        # TODO: change after debugging
         event_df = sanity_check.run()
+        # TODO: remove after debugging
         # event_df = pd.read_hdf(path_to_input_file, key="all_bout_data_sanity_checked_pandas")
 
     # Analysis Start ##############################################################
@@ -170,7 +170,7 @@ def prepare_data_wrapper(
             # Get unique experiment_IDs
             unique_ids = trial_event_df.index.unique('experiment_ID')
             n_output = len(unique_ids)
-            n_input = 16  # int(n_output/3)  # Number of experiment_IDs to sample
+            n_input = int(n_output/3)  # Number of experiment_IDs to sample
 
             # Create a list to store the bootstrapped data
             bootstrapped_df_list = []
@@ -242,10 +242,10 @@ def prepare_data_wrapper(
     # #############################################################################
     print(
         "Prepare data \033[92mdone\033[0m\n"
-        f"\t{experiment_name} {age_category} {agent_name} \033[94mn={n}\033[0m"
+        f"\t{path_name} {age_category} {agent_name} \033[94mn={n}\033[0m"
     )
     if slack_receiver:
-        send_slack_message(to=slack_receiver, message=f'prepare_data done for {experiment_name} {age_category} {agent_name}: n={n}')
+        send_slack_message(to=slack_receiver, message=f'prepare_data done for {path_name} {age_category} {agent_name}: n={n}')
 
 
 if __name__ == '__main__':
@@ -265,7 +265,7 @@ if __name__ == '__main__':
 
     prepare_data_wrapper(
         age_category=age_category, agent_name=agent_name,
-        experiment_name=experiment_name,
+        path_name=path_name,
         flip_dict=flip_dict, split_dict=split_dict, label_dict=label_dict,
         included_stim_names=stim_names,
         rolling_window=rolling_window, resampling_window=resampling_window,

@@ -4,7 +4,7 @@ import pandas as pd
 
 # Paths
 experiment_name = 'integrator'
-path_name = experiment_name
+path_name = 'fig3E'
 
 # Prepare data settings
 do_tracking = False

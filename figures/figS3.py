@@ -19,7 +19,7 @@ from settings.stim_homogeneous_temporal import *
 stim_name = experiment_name
 col_name = 'temporal'
 bin_name = 'temporal_bin'
-model_names = ['double_linear']
+model_names = ['double_log', 'double_linear']
 values = [-300, -120, -60, -30, 30, 60, 120, 300]
 value_bins = [-450, -150, -90, -45, 0, 45, 90, 150, 450]
 label = 'Brightness change\n(lux/s)'
@@ -27,9 +27,9 @@ ticks = [-300, -150, 0, 150, 300]
 tick_labels = [-300, '', 0, '', 300]
 
 # Paths
-path_to_fig_folder = path_to_main_fig_folder.joinpath('figS3_temporal')
+path_to_fig_folder = path_to_main_fig_folder.joinpath('figS3')
 path_to_fig_folder.mkdir(exist_ok=True)
-hdf5_file = path_to_fig_folder.joinpath(f'fit_df_{experiment_name}.hdf5')
+hdf5_file = path_to_main_data_folder.joinpath('models', f'fit_df_{experiment_name}.hdf5')
 key_base = experiment_name
 
 # Agents
@@ -64,7 +64,7 @@ median_df = get_median_df(event_df, bin_name)
 # #########################################################################
 # Fit model as function of brightness
 # #########################################################################
-ind_meta_fit_df, mean_ind_meta_fit_df, mean_meta_fit_df = fit_model(
+ind_meta_fit_df, mean_ind_meta_fit_df, mean_meta_fit_df = fit_models(
     median_df, agents, prop_classes,
     col_name, bin_name, model_names,
 )
@@ -82,6 +82,7 @@ for model_name in model_names:
         agents, prop_classes,
         bin_name, model_name,
         label=label, ticks=ticks, tick_labels=tick_labels,
+        x_lim=[-5, 305],
     )
     fig.suptitle(f'{stim_name} | {col_name} | {model_name}')
     savefig(fig, path_to_fig_folder.joinpath('median', f'{stim_name}_{model_name}.pdf'), close_fig=True)
@@ -98,6 +99,11 @@ for model_name in model_names:
     for fig, meta_par_name in zip(figs, meta_par_names):
         fig.suptitle(f'{stim_name} | {col_name} | {model_name} | {meta_par_name}')
         savefig(fig, path_to_fig_folder.joinpath('params', f'{stim_name}_{model_name}_{meta_par_name}.pdf'), close_fig=True)
+
+# Compare models #############################################################
+model_df = compare_models(median_df, agents, prop_classes, bin_name, model_names)
+fig = plot_model_comparison(model_df, agents, model_labels=['Double Log', 'Double Linear'])
+savefig(fig, path_to_fig_folder.joinpath(f'log_vs_linear.pdf'))
 
 # Print statistics and store to file ##########################################
 # print(stat_str)

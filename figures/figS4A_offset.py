@@ -16,7 +16,7 @@ from settings.stim_contrast_fov import *
 alpha = 0.2
 
 # Paths
-path_to_fig_folder = path_to_main_fig_folder.joinpath('figS4_FOV')
+path_to_fig_folder = path_to_main_fig_folder.joinpath('figS4')
 path_to_fig_folder.mkdir(exist_ok=True, parents=True)
 key_base = experiment_name
 
@@ -66,4 +66,4 @@ fig = plot_median(
     bin_name, None,
     label, ticks, ticks,
 )
-savefig(fig, path_to_fig_folder.joinpath('offset_median.pdf'), close_fig=True)
+savefig(fig, path_to_fig_folder.joinpath('A_offset_median.pdf'), close_fig=True)

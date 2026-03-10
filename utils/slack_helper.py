@@ -17,6 +17,9 @@ def store_slack_token(slack_token: str, bot_name="bahl-lab_bot", ):
 
 
 def send_slack_message(to: str or list, message: str, bot_name="bahl-lab_bot", add_meta_data=True):
+    print(f"Slack message not sent to {to} as we no longer have Slack. Original message:\n\t{message}")
+    return
+
     if isinstance(to, type(None)):
         return
 

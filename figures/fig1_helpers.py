@@ -3,6 +3,9 @@ Figure 1: Through development, zebrafish invert their brightness preference
 """
 import datetime
 from itertools import product
+import h5py
+
+import pandas as pd
 from scipy.stats import mannwhitneyu, ttest_ind, ttest_rel, wilcoxon, shapiro, circstd, pearsonr, linregress
 from scipy.special import kl_div
 
@@ -14,6 +17,14 @@ from settings.general_settings import *
 # #############################################################################
 # Import stimulus settings
 from settings.stim_arena_locked import *
+
+# Figures #####################################################################
+fig_width_cm = 18.4  # cm
+fig_height_cm = 18  # cm
+n_cols = 13
+pad = 0.1  # cm, both in x and y direction
+small_grid_x = fig_width_cm / n_cols
+small_grid_y = small_grid_x  # square grid
 
 # Bins ########################################################################
 nbins = 10  # set to even number to have a divide at 0
@@ -31,7 +42,6 @@ radius_bin_centers = (radius_bins[1:] + radius_bins[:-1]) / 2
 azimuth_bin_centers = (azimuth_bins[1:] + azimuth_bins[:-1]) / 2
 brightness_bin_centers = (brightness_bins[1:] + brightness_bins[:-1]) / 2
 
-
 # Stimuli to plot, in correct order
 stim_dict = {
     'splitview_left_dark_right_bright': {
@@ -46,7 +56,7 @@ stim_dict = {
     'azimuth_left_dark_right_bright_a': {
         'stim_name': 'azimuth_left_dark_right_bright', 'stim_label': 'Circular gradient',
         'column_name': 'azimuth',
-        'bin_name': 'azimuth_bin', 'bin_label': r'Angle (deg)', 'bin_label_avg': f"Average cosine\nweighted angle ()",
+        'bin_name': 'azimuth_bin', 'bin_label': r'Angle (deg)', 'bin_label_avg': f"Average cosine\nweighted angle (-)",
         'bins': azimuth_bins, 'bin_centers': azimuth_bin_centers,
         'ticks': azimuth_ticks, 'ticklabels': azimuth_ticklabels, 'ref_line': 180,
         'df_mean': 'azimuth_df', 'df_ind': 'azimuth_ind_df',  # later retrieved via eval
@@ -75,26 +85,26 @@ stim_dict = {
         'ticks': radius_ticks, 'ticklabels': radius_ticklabels,
         'df_mean': 'radius_df', 'df_ind': 'radius_ind_df',  # later retrieved via eval
     },
-    'control': {
-        'stim_name': 'control', 'stim_label': 'Control',
-        'column_name': 'radius',
-        'bin_name': 'radius_bin', 'bin_label': r'Radius (cm)', 'bin_label_avg': 'Average\nradial position (cm)',
-        'bins': radius_bins, 'bin_centers': radius_bin_centers,
-        'ticks': radius_ticks, 'ticklabels': radius_ticklabels,
-        'df_mean': 'radius_df', 'df_ind': 'radius_ind_df',  # later retrieved via eval
-    },
     # 'control': {
     #     'stim_name': 'control', 'stim_label': 'Control',
-    #     'column_name': 'x_position',
-    #     'bin_name': 'x_bin', 'bin_label': r'$x$-position (cm)', 'bin_label_avg': 'Average\n$x$-position (cm)',
-    #     'bins': x_bins, 'bin_centers': x_bin_centers,
-    #     'ticks': x_ticks, 'ticklabels': x_ticklabels, 'ref_line': 0,
-    #     'df_mean': 'x_df', 'df_ind': 'x_ind_df',  # later retrieved via eval
-    # }
+    #     'column_name': 'radius',
+    #     'bin_name': 'radius_bin', 'bin_label': r'Radius (cm)', 'bin_label_avg': 'Average\nradial position (cm)',
+    #     'bins': radius_bins, 'bin_centers': radius_bin_centers,
+    #     'ticks': radius_ticks, 'ticklabels': radius_ticklabels,
+    #     'df_mean': 'radius_df', 'df_ind': 'radius_ind_df',  # later retrieved via eval
+    # },
+    'control': {
+        'stim_name': 'control', 'stim_label': 'Control',
+        'column_name': 'x_position',
+        'bin_name': 'x_bin', 'bin_label': r'$X$-position (cm)', 'bin_label_avg': 'Average\n$x$-position (cm)',
+        'bins': x_bins, 'bin_centers': x_bin_centers,
+        'ticks': x_ticks, 'ticklabels': x_ticklabels, 'ref_line': 0,
+        'df_mean': 'x_df', 'df_ind': 'x_ind_df',  # later retrieved via eval
+    },
     'azimuth_left_dark_right_bright_virtual_yes': {
         'stim_name': 'azimuth_left_dark_right_bright_virtual_yes', 'stim_label': 'Circular gradient',
         'column_name': 'azimuth',
-        'bin_name': 'azimuth_bin', 'bin_label': r'Angle (deg)', 'bin_label_avg': f"Average cosine\nweighted angle ()",
+        'bin_name': 'azimuth_bin', 'bin_label': r'Angle (deg)', 'bin_label_avg': f"Average cosine\nweighted angle (-)",
         'bins': azimuth_bins, 'bin_centers': azimuth_bin_centers,
         'ticks': azimuth_ticks, 'ticklabels': azimuth_ticklabels, 'ref_line': 180,
         'df_mean': 'azimuth_df', 'df_ind': 'azimuth_ind_df',  # later retrieved via eval
@@ -106,7 +116,7 @@ stim_dict_fig2 = {
     'azimuth_left_dark_right_bright_virtual_yes': {
         'stim_name': 'azimuth_left_dark_right_bright_virtual_yes', 'stim_label': 'Virtual circular gradient',
         'column_name': 'azimuth',
-        'bin_name': 'azimuth_bin', 'bin_label': r'Angle (deg)', 'bin_label_avg': f"Average cosine\nweighted angle ()",
+        'bin_name': 'azimuth_bin', 'bin_label': r'Angle (deg)', 'bin_label_avg': f"Average cosine\nweighted angle (-)",
         'bins': azimuth_bins, 'bin_centers': azimuth_bin_centers,
         'ticks': azimuth_ticks, 'ticklabels': azimuth_ticklabels, 'ref_line': 180,
         'df_mean': 'azimuth_df', 'df_ind': 'azimuth_ind_df',  # later retrieved via eval
@@ -114,26 +124,128 @@ stim_dict_fig2 = {
     'azimuth_left_dark_right_bright': {
         'stim_name': 'azimuth_left_dark_right_bright', 'stim_label': 'Circular gradient',
         'column_name': 'azimuth',
-        'bin_name': 'azimuth_bin', 'bin_label': r'Angle (deg)', 'bin_label_avg': f"Average cosine\nweighted angle ()",
+        'bin_name': 'azimuth_bin', 'bin_label': r'Angle (deg)', 'bin_label_avg': f"Average cosine\nweighted angle (-)",
         'bins': azimuth_bins, 'bin_centers': azimuth_bin_centers,
         'ticks': azimuth_ticks, 'ticklabels': azimuth_ticklabels, 'ref_line': 180,
         'df_mean': 'azimuth_df', 'df_ind': 'azimuth_ind_df',  # later retrieved via eval
     },
 }
 
-
-stim_dict_quick = {
-    'splitview_left_dark_right_bright': stim_dict['splitview_left_dark_right_bright'],
-    'azimuth_left_dark_right_bright_a': stim_dict['azimuth_left_dark_right_bright_a'],
-    'center_bright_outside_dark': stim_dict['center_bright_outside_dark'],
-    'center_dark_outside_bright': stim_dict['center_dark_outside_bright'],
-    'control': stim_dict['control'],
+# Include for figure S7
+stim_dict_figS7 = {
+    'stim_name': 'azimuth_left_dark_right_bright_virtual_yes', 'stim_label': 'Virtual circular gradient',
+    'column_name': 'azimuth',
+    'bin_name': 'azimuth_bin', 'bin_label': r'Angle (deg)', 'bin_label_avg': f"Average cosine\nweighted angle (-)",
+    'bins': azimuth_bins, 'bin_centers': azimuth_bin_centers,
+    'ticks': azimuth_ticks, 'ticklabels': azimuth_ticklabels, 'ref_line': 180,
+    'df_mean': 'azimuth_df', 'df_ind': 'azimuth_ind_df',  # later retrieved via eval
 }
 
+agent_base_norm = 'Blind'
+agent_mapping = {
+    'model_ptB_plB_aB_tB_sB': {
+        'percentage_turns': 'blind',
+        'percentage_left': 'blind',
+        'turn_angle': 'blind',
+        'total_duration': 'blind',
+        'total_distance': 'blind',
+        'label': agent_base_norm, 'n_pars': 5*2,
+        'fig3_model_name': 'none',
+    },  # Blind
+    'A_B_A_A_A': {
+        'percentage_turns': 'azimuth_virtual',
+        'percentage_left': 'blind',
+        'turn_angle': 'azimuth_virtual',
+        'total_duration': 'azimuth_virtual',
+        'total_distance': 'azimuth_virtual',
+        'label': 'A', 'n_pars': 4*2 + 2,
+        'fig3_model_name': 'none'},  # Averaging pathway (Fig. 2)
+    'B_C_B_B_B': {
+        'percentage_turns': 'blind',
+        'percentage_left': 'st_c',
+        'turn_angle': 'blind',
+        'total_duration': 'blind',
+        'total_distance': 'blind',
+        'label': 'C', 'n_pars': 4*2 + 3,
+        'fig3_model_name': 'c'},  # Contrast pathway
+    'B_D_B_B_B': {
+        'percentage_turns': 'blind',
+        'percentage_left': 'st_d',
+        'turn_angle': 'blind',
+        'total_duration': 'blind',
+        'total_distance': 'blind',
+        'label': 'D', 'n_pars': 4*2 + 5,
+        'fig3_model_name': 'd'},  # Derivative pathway
+    'B_DC_B_B_B': {
+        'percentage_turns': 'blind',
+        'percentage_left': 'st_d_c',
+        'turn_angle': 'blind',
+        'total_duration': 'blind',
+        'total_distance': 'blind',
+        'label': 'D+C', 'n_pars': 4*2 + 5,
+        'fig3_model_name': 'd_c'},  # Contrast + Derivative (Fig. 3)
+    'A_DC_A_A_A_wCx5': {
+        'percentage_turns': 'azimuth_virtual',
+        'percentage_left': 'st_d_c_x5',
+        'turn_angle': 'azimuth_virtual',
+        'total_duration': 'azimuth_virtual',
+        'total_distance': 'azimuth_virtual',
+        'label': 'Proposed*', 'n_pars': 4 * 2 + 5,
+        'fig3_model_name': 'd_c'
+    },
+    'DA_DA_DA_DA_DA': {
+        'percentage_turns': 'st_da',
+        'percentage_left': 'st_da',
+        'turn_angle': 'st_da',
+        'total_duration': 'st_da',
+        'total_distance': 'st_da',
+        'label': 'DA', 'n_pars': 5 * 5,
+        'fig3_model_name': 'da'},
+    'model_ptAV_plST_aAV_tAV_sAV': {
+        'percentage_turns': 'azimuth_virtual',
+        'percentage_left': 'st_d_c',
+        'turn_angle': 'azimuth_virtual',
+        'total_duration': 'azimuth_virtual',
+        'total_distance': 'azimuth_virtual',
+        'label': 'Proposed', 'n_pars': 4*2 + 5,
+        'fig3_model_name': 'd_c'},
+    'model_ptT_plT_aT_tT_sT': {
+        'percentage_turns': 'st_ad',
+        'percentage_left': 'st_ad',
+        'turn_angle': 'st_ad',
+        'total_duration': 'st_ad',
+        'total_distance': 'st_ad',
+        'label': 'AD', 'n_pars': 5 * 5,
+        'fig3_model_name': 'da'},  # Averaging-derivative pathway (Fig. S4)
+    'superfit': {
+        'percentage_turns': 'st_superfit',
+        'percentage_left': 'st_superfit',
+        'turn_angle': 'st_superfit',
+        'total_duration': 'st_superfit',
+        'total_distance': 'st_superfit',
+        'label': 'Five-pathways', 'n_pars': 5 * 13,
+        'fig3_model_name': 'a_ad_d_c_da'},
+}
+
+# Specify ordering in fig1 figs7
+fig4_order = ['A', 'C', 'D', 'D+C', 'Proposed', ]
+figS7_order = [
+    agent_base_norm, 'A', 'C',
+    'D', 'D+C', 'Proposed', 'Proposed*',
+    'Five-pathways',
+    'AD', 'DA',
+]
+figS7B_order = [
+    agent_base_norm, 'A', 'C',
+    'D', 'D+C', 'Proposed',
+    'AD', 'DA',
+    'Five-pathways',
+]
 
 # Colormap range for 2D density plots
-ref_vmin, ref_vmax = 0.5, 1.5  # for larvae and juveniles
-test_vmin, test_vmax = 1, 1.5  # for agents
+ref_vmin, ref_vmax = 0, 1.5  # for larvae and juveniles
+test_vmin, test_vmax = 0, 1.5  # for agents
+
 
 # #############################################################################
 # Misc helper functions
@@ -184,6 +296,22 @@ def compute_weighted_histogram(group):
 
 
 def compute_bins(tracking_df):
+    return compute_bins_bins(
+        tracking_df,
+        x_bins, x_bin_centers,
+        y_bins, y_bin_centers,
+        radius_bins, radius_bin_centers,
+        azimuth_bins, azimuth_bin_centers,
+    )
+
+
+def compute_bins_bins(
+        tracking_df,
+        x_bins, x_bin_centers,
+        y_bins, y_bin_centers,
+        radius_bins, radius_bin_centers,
+        azimuth_bins, azimuth_bin_centers,
+):
     # Compute bins ############################################################
     print(f"\tComputing bins | ", end='')
     tracking_df['radius'] = np.sqrt(tracking_df['x_position'] ** 2 + tracking_df['y_position'] ** 2)
@@ -192,8 +320,10 @@ def compute_bins(tracking_df):
     # Use bin centers as labels
     tracking_df['x_bin'] = pd.cut(tracking_df['x_position'], bins=x_bins, labels=x_bin_centers, include_lowest=True)
     tracking_df['y_bin'] = pd.cut(tracking_df['y_position'], bins=y_bins, labels=y_bin_centers, include_lowest=True)
-    tracking_df['radius_bin'] = pd.cut(tracking_df['radius'], bins=radius_bins, labels=radius_bin_centers, include_lowest=True)
-    tracking_df['azimuth_bin'] = pd.cut(tracking_df['azimuth'], bins=azimuth_bins, labels=azimuth_bin_centers, include_lowest=True)
+    tracking_df['radius_bin'] = pd.cut(tracking_df['radius'], bins=radius_bins, labels=radius_bin_centers,
+                                       include_lowest=True)
+    tracking_df['azimuth_bin'] = pd.cut(tracking_df['azimuth'], bins=azimuth_bins, labels=azimuth_bin_centers,
+                                        include_lowest=True)
 
     # Group individual fish and stimuli
     print(f"grouping | ", end='')
@@ -277,34 +407,12 @@ def compute_swim_properties_tracking(tracking_df, total_frames, bin_names: list 
     return df_mean, df
 
 
-def compute_swim_properties_event(event_df, bin_names: list | str):
-    if not isinstance(bin_names, list):
-        bin_names = [bin_names]
-
-    print(f"Computing swim properties for", *bin_names, end=" ")
-    # Group data with different spatial bins
-    print("| group ", end='')
-    group = event_df.groupby(
-        ['fish_age', 'fish_genotype', 'experiment_ID', 'fish_or_agent_name',
-         'experiment_repeat', 'folder_name', 'stimulus_name',
-         *bin_names], observed=True)
-
-    # Compute swim properties (median per fish and per bin)
-    # TODO: fit distribution instead of median?
-    print("| median within fish ", end='')
-    group_median = group[['total_duration', 'total_distance', 'estimated_orientation_change', 'event_freq', 'average_speed', 'brightness']].median()
-    # After taking the median, round brightness values again to their bin
-    group_median['brightness_bin'] = pd.cut(group_median['brightness'], bins=brightness_bins, labels=brightness_bin_centers, include_lowest=True)
-    print("| \033[92mdone\033[0m")
-    return group_median
-
-
 def get_stim_arena_locked(stim_name, nbins, r_max, c_min, c_mid, c_max):
     """Get brightness level for each x and y bin"""
     # Prepare arena-locked stimuli
     bins = np.linspace(-r_max, r_max, nbins)
     xs, ys = np.meshgrid(bins, bins)
-    radius = np.sqrt(xs**2 + ys**2)
+    radius = np.sqrt(xs ** 2 + ys ** 2)
     angle = np.arctan2(ys, xs)  # radians: -pi to pi
     px = np.ones_like(radius) * np.nan  # must be an array of floats
 
@@ -327,13 +435,17 @@ def get_stim_arena_locked(stim_name, nbins, r_max, c_min, c_mid, c_max):
     else:
         print(f"\033[91m{stim_name} not recognised\033[0m")
 
-    return px, xs, ys   # (nbins, nbins), (nbins, nbins), (nbins, nbins)
+    return px, xs, ys  # (nbins, nbins), (nbins, nbins), (nbins, nbins)
 
 
 # #############################################################################
 # Stat functions
 # #############################################################################
-def get_bin_stats(mean_ind_df, agents, stim_dict, ):
+def get_bin_stats(mean_ind_df, agents, stim_dict, control_stim_name='control'):
+    # Ensure that agents has length 2
+    if len(agents) != 2:
+        agents = [agents[0], agents[0]]
+
     stat_str = (f'Computing bin statistics for {agents[0].name} and {agents[1].name}\n'
                 f'\t{datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")}\n')
     stat_list = []
@@ -377,17 +489,22 @@ def get_bin_stats(mean_ind_df, agents, stim_dict, ):
                 f'\t\t{p_value_to_stars(b_p_value0)}\t{b_p_value0:.5f}\t95% CI: [{ci_lower0:.2f}, {ci_upper0:.2f}]\t{agent0.name} vs 0\n'
             )
 
-        # Compare combinations between agents and stimuli #####################
-        combinations = list(product(agents, [stim_name, 'control']))  # all combinations of agents and stimuli
+        # Compare combinations between agents and stimulus-control stimulus #####################
+        combinations = list(product(agents, [stim_name, control_stim_name]))  # all combinations of agents and stimuli
         for k, ((agent0, stim0), (agent1, stim1)) in enumerate(product(combinations, repeat=2)):
+            # Define results as None
+            cohen_d, W_stat, W_p_value, U_stat, M_p_value = None, None, None, None, None
+            T_stat, T_p_value, test_name = None, None, 'N/A'
+            p_value, lower_bound, upper_bound = None, None, None
+
             # We do want to compare in both directions,
             # but are not interested self-comparisons or cross-comparisons
             if (agent0 == agent1) and (stim0 == stim1):
                 # Skip self-comparisons
-                W_stat, W_p_value, U_stat, M_p_value = None, None, None, None
+                pass
             elif (agent0 != agent1) and (stim0 != stim1):
                 # Skip cross comparisons
-                W_stat, W_p_value, U_stat, M_p_value = None, None, None, None
+                pass
             else:
                 # Query the data for this combination
                 try:
@@ -396,21 +513,34 @@ def get_bin_stats(mean_ind_df, agents, stim_dict, ):
                 except KeyError as e:
                     continue
 
+                # Compute cohen's d for effect size
+                n1, n2 = len(group1), len(group2)
+                s1, s2 = np.var(group1, ddof=1), np.var(group2, ddof=1)
+                s_pooled = np.sqrt(((n1 - 1) * s1 ** 2 + (n2 - 1) * s2 ** 2) / (n1 + n2 - 2))
+                cohen_d = (np.mean(group1) - np.mean(group2)) / s_pooled if s_pooled > 0 else np.nan
+
                 # Perform Mann-Whitney U test
                 U_stat, M_p_value = mannwhitneyu(group1, group2)
 
                 # Perform Welch's t-test, since variances are not necessarily equal
                 W_stat, W_p_value = ttest_ind(group1, group2, equal_var=False)
 
-                # Perform Shapiro-Wilk normality test
-                shapiro_p1 = shapiro(group1).pvalue if len(group1) > 3 else np.nan
-                shapiro_p2 = shapiro(group2).pvalue if len(group2) > 3 else np.nan
+                # Store result if test performed
+                stat_str += (f'\t{agent0.name} vs {agent1.name} | {stim0} vs {stim1} | {column_name}\n'
+                             f'\t\tMWU:         {p_value_to_stars(M_p_value)}\t{M_p_value:.10f} (U stat: {U_stat:.3f})\n'
+                             f'\t\tWelchs:      {p_value_to_stars(W_p_value)}\t{W_p_value:.10f} (W stat: {W_stat:.3f})\n'
+                             f'\t\tCohen\'s d:   {cohens_d_to_text(cohen_d)}\t{cohen_d:.2f}\n'
+                             )
 
-                # Paired test if within same agent
+                # Paired test if within same agent ############################
                 if agent0 == agent1 and len(group1) == len(group2):
-                    # Perform paired t-test if data is normally distributed
+                    # Perform Shapiro-Wilk normality test
+                    shapiro_p1 = shapiro(group1).pvalue if len(group1) > 3 else np.nan
+                    shapiro_p2 = shapiro(group2).pvalue if len(group2) > 3 else np.nan
+
                     try:
                         if shapiro_p1 > 0.05 and shapiro_p2 > 0.05:
+                            # Perform paired t-test if data is normally distributed
                             T_stat, T_p_value = ttest_rel(group1, group2)
                             test_name = "Paired t-test"
                         else:
@@ -418,7 +548,6 @@ def get_bin_stats(mean_ind_df, agents, stim_dict, ):
                             T_stat, T_p_value = wilcoxon(group1, group2)
                             test_name = "Wilcoxon signed-rank test"
                     except Exception as e:
-                        T_stat, T_p_value = None, None
                         print(f"\t\033[91mget_bin_stats(): {e}\033[0m")
 
                     # Bootstrap on paired-difference
@@ -426,8 +555,10 @@ def get_bin_stats(mean_ind_df, agents, stim_dict, ):
                     ci = 95
                     paired_differences = group2.values - group1.values  # stim_name - control
                     observed_mean = np.mean(paired_differences)
-                    boot_means = [np.mean(np.random.choice(paired_differences, size=len(paired_differences), replace=True)) for _ in
-                                  range(n_boot)]
+                    boot_means = [
+                        np.mean(np.random.choice(paired_differences, size=len(paired_differences), replace=True)) for _
+                        in
+                        range(n_boot)]
                     # Compute confidence interval
                     lower_bound = np.percentile(boot_means, (100 - ci) / 2)
                     upper_bound = np.percentile(boot_means, 100 - (100 - ci) / 2)
@@ -435,14 +566,17 @@ def get_bin_stats(mean_ind_df, agents, stim_dict, ):
                     # Compute p-value: Two-tailed test (proportion of samples as extreme as observed)
                     p_value = (np.sum(boot_means >= observed_mean) + np.sum(boot_means <= -observed_mean)) / n_boot
 
-                else:
-                    T_stat, T_p_value = None, None
+                    # Store result if test performed
+                    stat_str += (
+                        f'\t\t{test_name}: {p_value_to_stars(T_p_value)}\t{T_p_value:.10f} (T stat: {T_stat:.3f}\n'
+                        f'\t\tBootstrap on paired differences: {p_value_to_stars(p_value)}\t{p_value:.10f} (95% CI: [{lower_bound:.2f}, {upper_bound:.2f}])\n'
+                    )
 
-                # Store result if test performed
-                stat_str += (f'\t{agent0.name} vs {agent1.name} | {stim0} vs {stim1} | {column_name}\n'
-                             f'\t\tMWU:    {p_value_to_stars(M_p_value)}\t{M_p_value:.10f} (U stat: {U_stat:.3f})\n'
-                             f'\t\tWelchs: {p_value_to_stars(W_p_value)}\t{W_p_value:.10f} (W stat: {W_stat:.3f})\n')
-
+                # Store results to dictonary
+                stat_dict['Cohens d'] = {
+                    f'{agent0.name} vs {agent1.name}': {
+                        'd': cohen_d}
+                }
                 stat_dict['Mann-Whitney U test'] = {
                     f'{agent0.name} vs {agent1.name}': {
                         'p': M_p_value, 'stat': U_stat}
@@ -455,15 +589,15 @@ def get_bin_stats(mean_ind_df, agents, stim_dict, ):
             # Store all results
             stat_list.append([
                 agent0.name, agent1.name, stim0, stim1, column_name,
-                W_stat, W_p_value, U_stat, M_p_value,
-                None, None, None,
+                W_stat, W_p_value, U_stat, M_p_value, cohen_d,
+                p_value, lower_bound, upper_bound,
             ])
 
     # Create dataframe
     stat_df = pd.DataFrame(
         stat_list, columns=[
             'agent0', 'agent1', 'stim0', 'stim1', 'column_name',
-            'W_stat', 'W_p_value', 'U_stat', 'M_p_value',
+            'W_stat', 'W_p_value', 'U_stat', 'M_p_value', 'cohen_d',
             'Bootstrapping_p_value', 'ci_lower0', 'ci_upper0',
         ])
 
@@ -543,14 +677,14 @@ def _get_agent_stats(
     return _results_list
 
 
-def get_agent_zscores(
+def get_agent_stats(
         ref_agent, test_agent,
         stim_dict,
         # Will be retrieved via eval
         x_ind_df, radius_ind_df, azimuth_ind_df,
         do_bootstrap=True, n_bootstraps=1000,
 ):
-    print(f"\tget_agent_zscores() | {ref_agent.name} vs {test_agent.name} | do_bootstrap={do_bootstrap} ", end='')
+    print(f"\tget_agent_stats() | {ref_agent.name} vs {test_agent.name} | do_bootstrap={do_bootstrap} ", end='')
 
     # Compute for all individuals: no bootstrapping
     results_list = _get_agent_stats(
@@ -587,11 +721,72 @@ def get_agent_zscores(
     return results_list
 
 
+def get_prob_array(agents, stim_dict, x_ind_df, radius_ind_df, azimuth_ind_df):
+    p_array = np.empty(
+        (len(agents), len(stim_dict), nbins, 96)) * np.nan  # (N agents, N stimuli, N bins, N individuals)
+    # Loop over stimuli
+    for j, stim_values in enumerate(stim_dict.values()):
+        # Extract stimulus settings
+        stim_name = stim_values['stim_name']
+        df_ind = eval(stim_values['df_ind'])
+        bin_name = stim_values['bin_name']
+
+        for i, agent in enumerate(agents):
+            res = (
+                df_ind
+                # Keep only values for this stimulus and agent
+                .xs(stim_name, level='stimulus_name').query(agent.query)
+                    # Unstack and convert to numpy array
+                ['prob'].unstack(bin_name).to_numpy()
+            )  # (N individuals, N bins)
+
+            # Ensure number of individuals never exceeds 96.
+            if np.size(res, 0) > 96:
+                print(f"get_prob_array(): \033[93m{agent.name} {stim_name}: keep first 96 individuals.\033[0m")
+                res = res[:96]
+
+            p_array[i, j, :, :res.shape[0]] = res.T * 100  # Transpose to (N bins, N individuals) and store in p_array
+
+    return p_array
+
+
+def store_prob_array(p_array, path_to_file, agents_str):
+    ref_str = f'{agents_str}_prob_array'
+    path_to_file.parent.mkdir(parents=True, exist_ok=True)
+    with h5py.File(path_to_file, "a") as f:
+        if ref_str in f:
+            print(f"\tstore_prob_array():\t\033[93m '{ref_str}' already exists in {path_to_file}, overwriting\033[0m")
+            del f[ref_str]  # overwrite if it exists
+        f.create_dataset(ref_str, data=p_array)
+
+
+def read_prob_array(path_to_file, agents_str):
+    ref_str = f'{agents_str}_prob_array'
+    with h5py.File(path_to_file, "r") as f:
+        if ref_str not in f:
+            print(f"\tread_prob_array():\t\033[91m '{ref_str}' not found in {path_to_file}. Run fig4B.py \033[0m")
+            return None
+        return f[ref_str][()]  # read the dataset into a numpy array
+
+
+def compute_BIC(y_true, y_pred, k):
+    logL = compute_logl_prob_data(y_true, y_pred)
+
+    # Get number of data points
+    n = np.log(y_true.shape[3])
+
+    # Reshape number of parameters to match shape logL
+    # Multiplying with 0*logL trick to broadcast across all stimuli and ages
+    k = k[:, np.newaxis, np.newaxis] - 0 * logL
+
+    return n * k + 2 * logL
+
+
 # #############################################################################
 # Plot functions
 # #############################################################################
 # Trajectories ################################################################
-def plot_single_trajectory(ax, exp_df, stim_name, agent, s=0.2, alpha=0.05):
+def plot_single_trajectory(ax, exp_df, stim_name, agent, s=0.2, alpha=0.05, do_plot_stim_line=True):
     if stim_name not in exp_df.index.unique('stimulus_name'):
         return
 
@@ -607,7 +802,7 @@ def plot_single_trajectory(ax, exp_df, stim_name, agent, s=0.2, alpha=0.05):
     hide_all_spines_and_ticks(ax)
     set_aspect(ax, 'equal')
 
-    if stim_name == 'splitview_left_dark_right_bright':
+    if do_plot_stim_line and stim_name == 'splitview_left_dark_right_bright':
         set_axlines(ax, axvlines=0)
 
 
@@ -651,6 +846,7 @@ def plot_exp_trajectories(
     add_scalebar(ax, size=1, label='1 cm', loc='lower right')
 
     return fig
+
 
 def plot_all_trajectories(tracking_df_full, agents, stim_dict, path_to_fig_folder, **kwargs):
     # Plot separately for each agent
@@ -718,12 +914,79 @@ def plot_2d_density_ax(ax, stim_df, n_fish_stim, agent, vmin=None, vmax=None):
     return cbar
 
 
+def plot_2d_density_sem_ax(ax, stim_df, n_fish_stim, agent, vmin=None, vmax=None):
+    # Compute standard error of the mean (SEM)
+    fish_arrays = []
+    fig_empty, ax_empty = plt.subplots(1, 1)
+
+    # Loop over experiments
+    for j, (exp_ID, fish_df) in enumerate(stim_df.groupby('experiment_ID')):
+        # Compute hexbin with density for each individual
+        fish_hb = ax_empty.hexbin(
+            fish_df['x_position'], fish_df['y_position'],
+            gridsize=11, extent=(-6, 6, -6, 6),
+            linewidths=0,
+            mincnt=0,  # Include all hexagons, even those with zero counts
+        )
+        fish_array = fish_hb.get_array()
+        fish_arrays.append(fish_array)
+
+    # Close empty figure
+    plt.close(fig_empty)
+
+    # Create numpy array
+    fish_arrays = np.array(fish_arrays)
+    # Normalise within fish, to compute percentage
+    fish_arrays_normed = fish_arrays / np.sum(fish_arrays, axis=1, keepdims=True) * 100
+
+    # The outermost hexagons only include half of the data,
+    # so we set their values to nan to avoid misinterpretation
+    hex_x, hex_y = fish_hb.get_offsets().T  # Extract (x, y) centers of hexagons
+    radii = np.sqrt(hex_x ** 2 + hex_y ** 2)
+    fish_arrays_normed[:, radii >= 5] = np.nan
+
+    # Compute mean, std, sem over fish
+    n_fish = fish_arrays_normed.shape[0]
+    # h_mean = np.nanmean(fish_arrays_normed, axis=0)
+    h_std = np.nanstd(fish_arrays_normed, axis=0)
+    h_sem = h_std / np.sqrt(n_fish)
+
+    # Plot hexbin
+    # # Create empty hexbin to get hexagon centers
+    hb = ax.hexbin(
+        fish_df['x_position'], fish_df['y_position'],
+        gridsize=11, extent=(-6, 6, -6, 6),
+        linewidths=0,
+        mincnt=0,  # Include all hexagons, even those with zero counts
+    )
+
+    # Update hexbin with values
+    hb.set_array(h_sem)
+    hb.set_clim(vmin, vmax)
+    hb.set_cmap(agent.cmap)  # must be set again to update figure
+
+    # Format
+    ax.set_aspect('equal')
+    hide_all_spines_and_ticks(ax)
+    set_ticks(ax, x_ticks=[], y_ticks=[])
+
+    # Create colorbar
+    ticks = np.linspace(vmin, vmax, 5)
+    ticklabels = [f'{tick:.1f}' for tick in ticks]
+    cbar = get_colorbar(
+        agent.cmap, ticks=ticks, ticklabels=ticklabels,
+        orientation='vertical',
+        figsize=(ax_x_cm * cm, ax_y_cm * cm)
+    )
+
+    return cbar
+
+
 def plot_2d_density(
         tracking_df, agents, stim_dict,
         vmin=0, vmax=None,
         ax_x_cm=2, ax_y_cm=2, x_offset=0.2,
 ):
-
     cbars = []
 
     # Create figure
@@ -765,28 +1028,30 @@ def plot_2d_density(
     return fig, cbars
 
 
-def compute_2d_density_control_ax(agent_tracking_df):
+def compute_2d_density_stim(agent_tracking_df, stim_name='control'):
+    stim_names = agent_tracking_df.index.unique('stimulus_name')
+    if not stim_name in stim_names:
+        print(f"compute_2d_density_stim(): \033[93m{stim_name} not in data\033[0m")
+        return None
+
     # Create an empty axes to compute the control
     fig_empty, ax_empty = plt.subplots(1, 1)
 
-    # Get control density histogram
-    if 'control' in stim_names:
-        control_df = agent_tracking_df.xs('control', level='stimulus_name')
-        n_fish_control = control_df.index.unique('experiment_ID').size
-        hb_control = ax_empty.hexbin(
-            control_df['x_position'], control_df['y_position'],
-            C=control_df['prob'] / n_fish_control * 100,  # Normalize by number of fish
-            reduce_C_function=np.sum,
-            gridsize=11, extent=(-6, 6, -6, 6),
-            linewidths=0
-        )
-        control_array = hb_control.get_array()
-    else:
-        control_array = None  # No control available
+    # Get stim density histogram
+    stim_df = agent_tracking_df.xs(stim_name, level='stimulus_name')
+    n_fish_stim = stim_df.index.unique('experiment_ID').size
+    hb_stim = ax_empty.hexbin(
+        stim_df['x_position'], stim_df['y_position'],
+        C=stim_df['prob'] / n_fish_stim * 100,  # Normalize by number of fish
+        reduce_C_function=np.sum,
+        gridsize=11, extent=(-6, 6, -6, 6),
+        linewidths=0,
+        mincnt=0,  # Include all hexagons, even those with zero counts
+    )
+    stim_array = hb_stim.get_array()
 
     plt.close(fig_empty)  # Close the figure
-
-    return control_array
+    return stim_array
 
 
 def plot_2d_density_diff_ax(ax, stim_df, n_fish_stim, control_array, vmin=-0.4, vmax=0.4, cmap=CMAP_DIFF):
@@ -796,7 +1061,8 @@ def plot_2d_density_diff_ax(ax, stim_df, n_fish_stim, control_array, vmin=-0.4, 
         C=stim_df['prob'] / n_fish_stim * 100,  # Normalize by number of fish
         reduce_C_function=np.sum,
         gridsize=11, extent=(-6, 6, -6, 6),
-        linewidths=0
+        linewidths=0,
+        mincnt=0,  # Include all hexagons, even those with zero counts
     )
     stim_array = hb_stim.get_array()
 
@@ -813,7 +1079,7 @@ def plot_2d_density_diff_ax(ax, stim_df, n_fish_stim, control_array, vmin=-0.4, 
     else:
         hb_stim.set_array(stim_array)
 
-    # Print vmin and vmax
+    # Set vmin and vmax
     if isinstance(vmax, type(None)):
         hb_vmin = hb_stim.get_array().min()
         hb_vmax = hb_stim.get_array().max()
@@ -849,7 +1115,7 @@ def plot_2d_density_diff(
         stim_names = agent_tracking_df.index.unique('stimulus_name')
 
         # Compute control density histogram for 2d density difference
-        control_array = compute_2d_density_control_ax(agent_tracking_df)
+        control_array = compute_2d_density_stim(agent_tracking_df, stim_name='control')
 
         # Loop over stimuli
         for i, stim_values in enumerate(stim_dict.values()):
@@ -893,8 +1159,8 @@ def plot_2d_density_diff(
 
 # 1D density ##################################################################
 def get_chance_level(
-    bin_name,
-    x_bins, azimuth_bins, radius_bins,
+        bin_name,
+        x_bins, azimuth_bins, radius_bins,
 ):
     # Compute bin centers
     x_bin_centers = (x_bins[1:] + x_bins[:-1]) / 2
@@ -941,7 +1207,8 @@ def plot_1d_density_ax(
         # If the following are not None, individuals will be plotted
         x_ind_df=None, radius_ind_df=None, azimuth_ind_df=None,
         # If given, plot reference stimulus as line
-        ref_stim_name=False,
+        ref_stim_name=False, ref_stim_color=None,
+        values_df=pd.DataFrame(),
 ):
     # Extract stimulus settings
     df_mean = eval(stim_values['df_mean'])
@@ -1001,9 +1268,17 @@ def plot_1d_density_ax(
                 ref_x, chance = get_chance_level(bin_name, x_bins, azimuth_bins, radius_bins)
                 ref_median -= chance
 
+            # Determine reference stim color
+            if isinstance(ref_stim_color, str):
+                _ref_stim_color = ref_stim_color
+            elif isinstance(ref_stim_color, type(None)):
+                _ref_stim_color = agent.color
+            else:
+                raise ValueError("ref_stim_color must be str or None")
+
             ax.plot(
                 ref_x, ref_median.values,
-                color=agent.color, linestyle='-', lw=LW_ANNOT,
+                color=_ref_stim_color, linestyle='-', lw=LW_ANNOT,
                 label=f'Chance', zorder=-50,
             )
 
@@ -1029,9 +1304,9 @@ def plot_1d_density_ax(
                 # Subtract chance level for each bin, by aligning the indices
                 agent_ind_df[ind_col_name] = agent_ind_df['prob'] - (
                     agent_ind_df
-                    .index.get_level_values(bin_name)   # Get all bin values
-                    .astype(float)                      # Ensure categories are converted to float
-                    .map(chance_df['chance'])           # Map chance level for each bin
+                    .index.get_level_values(bin_name)  # Get all bin values
+                    .astype(float)  # Ensure categories are converted to float
+                    .map(chance_df['chance'])  # Map chance level for each bin
                 )
 
             sns.lineplot(
@@ -1100,7 +1375,7 @@ def plot_1d_density(
         x_df, radius_df, azimuth_df,
         # If the following are not None, individuals will be plotted
         x_ind_df=None, radius_ind_df=None, azimuth_ind_df=None,
-        ref_stim_name=None,
+        ref_stim_name=None, ref_stim_color=None,
         ax_x_cm=4, ax_y_cm=3,
 ):
     # Ensure agents is a list
@@ -1134,6 +1409,7 @@ def plot_1d_density(
                 x_df, radius_df, azimuth_df,
                 x_ind_df, radius_ind_df, azimuth_ind_df,
                 ref_stim_name=ref_stim_name,
+                ref_stim_color=ref_stim_color,
             )
 
             # # Hide y-axis for all but first column
@@ -1171,12 +1447,12 @@ def plot_1d_density_all_bins(
             print(f"Plotting 1D density plot | {stim_name}", end='\r')
             # Loop over bins
             for i, (df_mean_name, df_ind_name, bin_name, bin_label, ticks, tick_labels) in enumerate(zip(
-                ['x_df', 'radius_df', 'azimuth_df'],
-                ['x_ind_df', 'radius_ind_df', 'azimuth_ind_df'],
-                ['x_bin', 'radius_bin', 'azimuth_bin'],
-                ['x position (cm)', 'radius (cm)', 'azimuth (deg)'],
-                [x_ticks, radius_ticks, azimuth_ticks],
-                [x_ticklabels, radius_ticklabels, azimuth_ticklabels],
+                    ['x_df', 'radius_df', 'azimuth_df'],
+                    ['x_ind_df', 'radius_ind_df', 'azimuth_ind_df'],
+                    ['x_bin', 'radius_bin', 'azimuth_bin'],
+                    ['x position (cm)', 'radius (cm)', 'azimuth (deg)'],
+                    [x_ticks, radius_ticks, azimuth_ticks],
+                    [x_ticklabels, radius_ticklabels, azimuth_ticklabels],
             )):
                 # Add axes
                 l, b, w, h = (
@@ -1237,9 +1513,8 @@ def plot_1d_density_fig_s1(
         agents = [agents]
     agent_str = '_and_'.join([agent.name for agent in agents])
 
-
     # Create figure for this agent
-    fig = create_figure(5 * (pad_x_cm + ax_x_cm), 4*(pad_y_cm + ax_y_cm))
+    fig = create_figure(5 * (pad_x_cm + ax_x_cm), 4 * (pad_y_cm + ax_y_cm))
     fig.suptitle(agent_str)
 
     # First row: control stimulus, all bins
@@ -1337,7 +1612,7 @@ def plot_1d_density_fig_s1(
 
 
 def _prepare_bin_stats_plot(
-    mean_ind_df, stim_values, agents,
+        mean_ind_df, stim_values, agents, control_stim_name='control'
 ):
     agent_str = ' vs '.join([agent.name for agent in agents])
 
@@ -1372,21 +1647,21 @@ def _prepare_bin_stats_plot(
     # Prepare data for plotting ###########################################
     # Mean within fish
     plot_df = mean_ind_df.reset_index()  # Reset index for easier filtering
-    plot_df = plot_df[plot_df['stimulus_name'].isin([stim_name, 'control'])]  # Keep only the relevant stimuli
+    plot_df = plot_df[plot_df['stimulus_name'].isin([stim_name, control_stim_name])]  # Keep only the relevant stimuli
     plot_df['group'] = ''  # Add group column
     # # Assign groups, stimulus order and color
     palette_dict = {}
     stim_order = []
     counter = 0  # ensure unique groups in desired order
     for agent in agents:
-        for current_stim_name in ['control', stim_name]:
+        for current_stim_name in [control_stim_name, stim_name]:
             group_name = f"{counter} {agent.name} {current_stim_name}"
             stim_order.append(group_name)
             # Get rows corresponding to mean_ind_df.query(agent.query).xs(stim_name, level='stimulus_name')
             rows = plot_df.query(agent.query).query(
                 f"'{current_stim_name}' in stimulus_name")  # xs(current_stim_name, level='stimulus_name', drop_level=False)
             plot_df.loc[rows.index, 'group'] = group_name
-            if current_stim_name == 'control':
+            if current_stim_name == control_stim_name:
                 palette_dict[group_name] = COLOR_ANNOT
             else:
                 palette_dict[group_name] = agent.color
@@ -1399,8 +1674,7 @@ def _prepare_bin_stats_plot(
     return plot_df, palette_dict, ticks, ticklabels, ref_line
 
 
-def plot_bin_stats_stripplot_ax(ax, mean_ind_df, stat_df, agents, stim_values):
-
+def plot_bin_stats_stripplot_ax(ax, mean_ind_df, stat_df, agents, stim_values, control_stim_name='control'):
     # Extract stimulus settings
     stim_name = stim_values['stim_name']
     column_name = stim_values['column_name']
@@ -1424,16 +1698,19 @@ def plot_bin_stats_stripplot_ax(ax, mean_ind_df, stat_df, agents, stim_values):
 
     # Add statistics
     # # Compare stim and control
-    p_value_agent1 = p_value_to_stars(stat_df.query(
-        f"stim0 == '{stim_name}' and stim1 == 'control' and agent0 == '{agents[1].name}' and agent1 == '{agents[1].name}'"
-    )['M_p_value'].values[0])
+    try:
+        p_value_agent1 = p_value_to_stars(stat_df.query(
+            f"stim0 == '{stim_name}' and stim1 == '{control_stim_name}' and agent0 == '{agents[1].name}' and agent1 == '{agents[1].name}'"
+        )['M_p_value'].values[0])
+    except IndexError:
+        print("jghjfjgjff")
     # # Compare stim between agents
     p_value_stim = p_value_to_stars(stat_df.query(
         f"stim0 == '{stim_name}' and stim1 == '{stim_name}' and agent0 == '{agents[0].name}' and agent1 == '{agents[1].name}'"
     )['M_p_value'].values[0])
     # # Compare stim and control
     p_value_agent0 = p_value_to_stars(stat_df.query(
-        f"stim0 == '{stim_name}' and stim1 == 'control' and agent0 == '{agents[0].name}' and agent1 == '{agents[0].name}'"
+        f"stim0 == '{stim_name}' and stim1 == '{control_stim_name}' and agent0 == '{agents[0].name}' and agent1 == '{agents[0].name}'"
     )['M_p_value'].values[0])
 
     # x-coordinates in dataspace, y-coordinates in axes space
@@ -1511,7 +1788,9 @@ def plot_bin_stats(
             )
 
             # Add statistics within histogram
-            p_value = p_value_to_stars(stat_df.query(f"stim0 == '{stim_name}' and stim1 == 'control' and agent0 == '{agent.name}' and agent1 == '{agent.name}'")['M_p_value'].values[0])
+            p_value = p_value_to_stars(stat_df.query(
+                f"stim0 == '{stim_name}' and stim1 == 'control' and agent0 == '{agent.name}' and agent1 == '{agent.name}'")[
+                                           'M_p_value'].values[0])
             # ax.text(0.5, 1, p_value, transform=ax.transAxes, ha='center', va='bottom')
             ax.text(1, 0.5, p_value, transform=ax.transAxes, ha='left', va='center')
 
@@ -1636,8 +1915,8 @@ def plot_stimulus_ax(ax, stim_name, nbins=256, r_max=6, c_min=0, c_mid=300, c_ma
 
 def plot_stimuli(stim_dict, ax_x_cm=2, ax_y_cm=2, x_offset=0.2):
     fig = create_figure(fig_height=pad_y_cm + ax_y_cm)
-    j = 0   # assign row
-    k = 0   # assign column
+    j = 0  # assign row
+    k = 0  # assign column
     # Loop over stimuli
     for i, stim_values in enumerate(stim_dict.values()):
         # Extract stimulus settings
@@ -1655,4 +1934,3 @@ def plot_stimuli(stim_dict, ax_x_cm=2, ax_y_cm=2, x_offset=0.2):
         plot_stimulus_ax(ax, stim_name)
 
     return fig
-

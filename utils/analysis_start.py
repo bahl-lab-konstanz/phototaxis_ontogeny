@@ -623,12 +623,15 @@ class AnalysisStart:
         trial_df_reset['midline_length'] = trial_df_reset['midline_length'].fillna(np.sqrt(trial_df_reset['contour_area'] / self.midline_factor))  # cm
 
         # Compute median contour_area and midline_length per fish
-        trial_df_reset[['contour_area', 'midline_length']] = trial_df_reset.groupby([
-            'experiment_ID', 'fish_or_agent_name', 'experiment_repeat',
-            'fish_genotype', 'fish_age', 'folder_name',
-        ])[['contour_area', 'midline_length']].transform('median')
-        trial_df_reset['contour_area'].round(decimals=0)  # Round to nearest integer
-        trial_df_reset['midline_length'].round(decimals=2)  # Round to 2 decimals
+        try:
+            trial_df_reset[['contour_area', 'midline_length']] = trial_df_reset.groupby([
+                'experiment_ID', 'fish_or_agent_name', 'experiment_repeat',
+                'fish_genotype', 'fish_age', 'folder_name',
+            ])[['contour_area', 'midline_length']].transform('median')
+            trial_df_reset['contour_area'].round(decimals=0)  # Round to nearest integer
+            trial_df_reset['midline_length'].round(decimals=2)  # Round to 2 decimals
+        except IndexError as e:
+            print(f'\t\tCompute median contour_area and midline_length per fish: {e}')
 
         # Recompute values between the start of each swim and the start of its consecutive swim
         if self.data_type == 'bout':

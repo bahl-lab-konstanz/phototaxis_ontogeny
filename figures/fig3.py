@@ -1,8 +1,12 @@
 # Standard library imports
 import datetime
+import itertools
+
+import pandas as pd
 
 # Local library imports
 from fig3_helpers import get_peaks
+from figures.fig3_helpers import assign_phases
 from utils.plot_utils import *
 from utils.general_utils import load_event_df, load_median_df, get_median_df_time, get_n_fish, get_b_values, get_stats_two_groups
 from utils.models import ModelD_C
@@ -19,7 +23,7 @@ from settings.plot_settings import *
 from settings.stim_brightness_choice_simple import *
 
 # Paths
-path_to_fig_folder = path_to_main_fig_folder.joinpath(f'fig3_{experiment_name}')
+path_to_fig_folder = path_to_main_fig_folder.joinpath(f'fig3')
 path_to_fig_folder.mkdir(exist_ok=True)
 
 # Agents
@@ -31,8 +35,8 @@ prop_class = PercentageLeft()
 
 # Models
 model = ModelD_C()
-hdf5_file = path_to_fig_folder.joinpath('models', 'fit_dfs', f'fit_df_{model.name}.hdf5')
 key_base = model.name
+hdf5_file = path_to_main_data_folder.joinpath('models', f'fit_df_{key_base}.hdf5')
 
 # Create stat str and file for this experiment
 path_to_stat_file = path_to_fig_folder.joinpath(f'stats_{experiment_name}.txt')
@@ -51,7 +55,7 @@ pad_y_cm = 1
 # Load and prepare data
 # #############################################################################
 # Load data
-event_df = load_event_df(path_to_main_data_folder, experiment_name, agents)
+event_df = load_event_df(path_to_main_data_folder, path_name, agents)
 median_df = get_median_df_time(event_df, resampling_window)
 n_fish_dict = get_n_fish(event_df, agents)
 
@@ -70,13 +74,17 @@ fig = create_figure(fig_width_cm + pad_x_cm, fig_width_cm)
 # #############################################################################
 # Specify time and brightness for plotting
 dt_hat = 1
-ts_hat = np.arange(dt_hat / 2, t_ns[-1] + dt_hat / 2, dt_hat)
+ts_hat = np.arange(dt_hat / 2, t_ns[-1] + dt_hat, dt_hat)
 b_left, b_right = get_b_values(ts_hat, t_ns, b_left_ns, b_right_ns)
+
+# Prepare for data export
+panel_name = '3B'
+panel_data = []
 
 # Prepare axis
 i = 2
 time_pad_y_cm = 0.5
-time_x_cm = 3 * ax_x_cm
+time_x_cm = 2.5 * ax_x_cm
 time_y_cm = 2  # cm
 offset_x_cm = i * ax_x_cm
 offset_y_cm = 2 * ax_y_cm + pad_y_cm
@@ -93,7 +101,7 @@ for j, agent in enumerate(agents[::-1]):
     agent_df = median_df.query(agent.query)
 
     # Plot mean and sem over individuals
-    group = agent_df.groupby('time')[prop_class.prop_name]
+    group = agent_df.query(f'{time_lim[0]} <= time <= {time_lim[1]}').groupby('time')[prop_class.prop_name]
     mean = group.mean()
     sem = group.sem()
     std = group.std()
@@ -124,6 +132,16 @@ for j, agent in enumerate(agents[::-1]):
     # Add vertical lines for time reference
     set_axlines(ax, axvlines=t_ns[1:-1], vlim=[prop_class.par_ticks[0][0], prop_class.par_ticks[0][-1]], alpha=0.2)
 
+    # Store data for export
+    df_out = pd.DataFrame({
+        "time": mean.index,
+        f"{agent.label}_mean": mean.values,
+        f"{agent.label}_sem": sem.values,
+        f"{agent.label}_fit_time": ts_hat,
+        f"{agent.label}_fit": mean_ind_hat,
+    })
+    panel_data.append(df_out)
+
 # Hide shared-x axis for larvae
 hide_spines(ax, ['bottom'], hide_ticks=True)
 
@@ -131,7 +149,6 @@ hide_spines(ax, ['bottom'], hide_ticks=True)
 offset_stim_y_cm = 9.5  # cm
 stim_x_cm = time_x_cm
 stim_y_cm = 0.25 # cm
-
 
 l, b, w, h = (
     offset_x_cm,
@@ -145,11 +162,66 @@ add_stimulus_bar(ax, t_ns, b_left_ns, b_right_ns, axvline=False, y_pos=0.5, heig
 set_ticks(ax, x_ticks=[], y_ticks=[])
 
 # #############################################################################
+# Fig 3C: Effect quantification
+# #############################################################################
+# Assign phase based on time
+phased_df = assign_phases(median_df, t_transient=1, t_steady_start=10, t_steady_end=20)
+
+for j, agent in enumerate(agents[::-1]):
+    l, b, w, h = (
+        offset_x_cm + time_x_cm + pad_y_cm/10,
+        offset_y_cm + j * (time_y_cm),
+        ax_x_cm / 2,
+        time_y_cm - time_pad_y_cm,
+    )
+    ax = add_axes(fig, l, b, w, h)
+
+    agent_df = phased_df.reset_index().query(agent.query)
+
+    # Colours
+    palette_dict = {
+        'transient': agent.color, 'steady': agent.color, 'control': 'grey',
+    }
+
+    sns.stripplot(
+        data=agent_df,
+        x='phase', y='phase_values',
+        hue='phase', palette=palette_dict, alpha=ALPHA, size=MARKER_SIZE,
+        marker=MARKER_HOLLOW, order=['transient', 'steady', 'control'],
+        ax=ax,
+    )
+
+    for (phase1, phase2), (x1, x2), y in zip(
+            [('transient', 'steady'), ('control', 'steady'), ('control', 'transient')],
+            [(0, 0.9), (1.1, 2), (0, 2)], [1, 1, 1.1]
+    ):
+        _stat_str, stat_dict = get_stats_two_groups(
+            'transient', 'steady state',
+            agent_df.query(f'phase == "{phase1}"')['phase_values'],
+            agent_df.query(f'phase == "{phase2}"')['phase_values'],
+        )
+        add_stats(ax, x1, x2, y, p_value_to_stars(stat_dict['Mann-Whitney U test']['p']))
+
+    # Format
+    set_spine_position(ax, )
+    hide_spines(ax, ['top', 'right', 'bottom', 'left'])
+    set_ticks(ax, y_ticks=[], x_ticklabels=[], x_ticksize=0)
+    set_bounds(ax, y=[prop_class.par_ticks[0][0], prop_class.par_ticks[0][-1]])
+    set_lims(ax, [-0.5, 2.5], prop_class.par_lims[0])
+    set_spine_position(ax, ['left', 'bottom'])
+    set_labels(ax, x='', y='')
+    set_axlines(ax, axhlines=prop_class.prop_axlines)
+
+# #############################################################################
 # Fig 3D: fitted parameters
 # #############################################################################
 offset_x_cm = 0.2
 _pad_x_cm = 1.5
 jitter = 0.5
+
+# Prepare for data export
+panel_name = '3D'
+panel_data = []
 
 # Format
 plot_dict = {
@@ -183,21 +255,22 @@ par_names = ['wD_pos', 'wD_neg', 'tau_lpf', 'wC', ]
 for num, (ax, meta_par_name) in enumerate(zip(axs, par_names)):
     ind_meta_popt = ind_fit_df.xs(prop_class.prop_name, level='prop_name')
     mean_ind_meta_popt = fit_df.xs(prop_class.prop_name, level='prop_name')
+    median_meta_popt = ind_meta_popt.groupby('fish_age')[meta_par_name].median()
 
     sns.stripplot(  # Individual fits
         data=ind_meta_popt.reset_index(), x='fish_age', y=meta_par_name,
         hue='fish_age', palette=AGE_PALETTE_DICT, alpha=ALPHA, size=MARKER_SIZE,
-        marker='o',
+        marker=MARKER_HOLLOW,
         dodge=True, jitter=jitter,
         label='Bootstrapped', legend=False,
         ax=ax
     )
-    sns.stripplot(  # Mean over fits to individual data
-        data=mean_ind_meta_popt.reset_index(),
+    sns.stripplot(  # Median over fits to individual data
+        data=median_meta_popt.reset_index(),
         x='fish_age', y=meta_par_name,
         hue='fish_age', palette=ListedColormap([COLOR_ANNOT]), size=MARKER_SIZE_LARGE, marker='X',
         dodge=True,
-        label='Mean', legend=False,
+        label='Median', legend=False,
         ax=ax,
     )
 
@@ -208,6 +281,8 @@ for num, (ax, meta_par_name) in enumerate(zip(axs, par_names)):
         ind_meta_popt.query(agents[1].query)[meta_par_name],
     )
     add_stats(ax, 0, 1, ANNOT_Y, p_value_to_stars(stat_dict['Mann-Whitney U test']['p']))
+    # Print Cohen's d for effect size
+    print(f"{meta_par_name}: Cohen\'s d = {stat_dict['Cohens d']['d']:.3f} ({stat_dict['Cohens d']['d_text']})")
 
     # # Get ticks
     ticks = plot_dict[meta_par_name]['ticks']
@@ -226,20 +301,30 @@ for num, (ax, meta_par_name) in enumerate(zip(axs, par_names)):
     if meta_par_name == 'wD_neg':
         ax.invert_yaxis()
 
+    # Store data for export
+    panel_data.append(pd.DataFrame({
+        f"{meta_par_name}_larva": ind_meta_popt.query(Larva().query).reset_index()[meta_par_name],
+        f"{meta_par_name}_juvie": ind_meta_popt.query(Juvie().query).reset_index()[meta_par_name],
+    }))
+
+
 # #############################################################################
 # Fig 3E: Integrator
 # #############################################################################
 # Stimulus settings
 from settings.stim_brightness_integrator import *
 
-
 # Load data
-event_df = load_event_df(path_to_main_data_folder, experiment_name, agents)
-median_df = load_median_df(path_to_main_data_folder, experiment_name, agents)
+event_df = load_event_df(path_to_main_data_folder, path_name, agents)
+median_df = load_median_df(path_to_main_data_folder, path_name, agents)
 n_fish_dict = get_n_fish(median_df, agents)
 
 # Detect peak positions #######################################################
 peak_df = get_peaks(median_df, fit_df, agents, model, t_intervals)
+
+# Prepare for data export
+panel_name = '3E'
+panel_data = []
 
 # fig = create_figure(fig_width_cm + pad_x_cm, fig_width_cm)
 _pad_x_cm, _pad_y_cm = 0, 1  # cm
@@ -248,9 +333,11 @@ offset_y_cm = 1.5
 _ax_x_cm = 1.25 * ax_x_cm
 
 # Plot peaks
-axs = []
-for k, agent in enumerate(agents[::-1]):
-    for j, stim_query in enumerate(['_LbrightRbright_LdarkRbright', '_LdarkRdark_LdarkRbright']):
+axs = []  # Collect for formatting
+for j, stim_query in enumerate(['_LbrightRbright_LdarkRbright', '_LdarkRdark_LdarkRbright']):
+    sheet_data = []
+    for k, agent in enumerate(agents[::-1]):
+
         i = 3 + k
 
         l, b, w, h = (
@@ -262,35 +349,45 @@ for k, agent in enumerate(agents[::-1]):
         ax = add_axes(fig, l, b, w, h)
         axs.append(ax)
 
-        plot_df = (
+        plot_data_df = (
             peak_df
             .query(agent.query)
             .xs('data', level='type')
             .xs(stim_query, level='stim_query')
         )
-        ax.errorbar(plot_df['t_interval'], plot_df['peak_mean'], plot_df['peak_std'], color=agent.color, fmt='o')
+        ax.errorbar(plot_data_df['t_interval'], plot_data_df['peak_mean'], plot_data_df['peak_std'], color=agent.color, fmt='o')
 
-        plot_df = (
+        plot_fit_df = (
             peak_df
             .query(agent.query)
             .xs('fit', level='type')
             .xs(stim_query, level='stim_query')
         )
-        ax.plot(plot_df['t_interval'], plot_df['peak_mean'], color=COLOR_MODEL, linestyle='--', zorder=-100)
+        ax.plot(plot_fit_df['t_interval'], plot_fit_df['peak_mean'], color=COLOR_MODEL, linestyle='--', zorder=-100)
+
+        # Store data for export
+        # # First add data and fit values separately
+        sheet_data.append(pd.DataFrame({
+            "t_interval": plot_data_df['t_interval'],
+            f"{agent.label}_data_mean": plot_data_df['peak_mean'].values,
+            f"{agent.label}_data_std": plot_data_df['peak_std'].values,
+        }))
+        sheet_data.append(pd.DataFrame({
+            "t_interval": plot_fit_df['t_interval'],
+            f"{agent.label}_fit_mean": plot_fit_df['peak_mean'].values,
+        }))
 
 axes = np.reshape(axs, (2, -1))
 
 # Format all axes
 hide_spines(axes)
 set_axlines(axes, axhlines=50, hlim=[0, 10])
-# set_labels(axes[:, 0], y=f'{prop_class.label}\n({prop_class.unit})')
-set_labels(axes[0, :], x='Interval (s)')
+set_labels(axes[:, 0], x='Interval (s)')
 set_lims(axes, x=[-1, 11], y=[15, 90])
 set_bounds(axes, x=[0, 10], y=[20, 80])
 set_ticks(axes, x_ticks=[0, 5, 10], y_ticks=[20, 50, 80])
-
-hide_spines(axes[:, 1], spines=['left'], hide_ticks=True)
-hide_spines(axes[1, :], spines=['bottom'], hide_ticks=True)
+hide_spines(axes[1, :], spines=['left'], hide_ticks=True)
+hide_spines(axes[:, 1], spines=['bottom'], hide_ticks=True)
 
 savefig(fig, path_to_fig_folder.joinpath('fig3.pdf'))
 

@@ -1,6 +1,6 @@
 # Paths
 experiment_name = 'homogeneous_radius'
-path_name = experiment_name
+path_name = 'figS4BC'
 
 # Prepare data settings
 do_tracking = False

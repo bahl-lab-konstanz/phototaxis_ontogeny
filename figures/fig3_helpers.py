@@ -3,7 +3,7 @@
 from scipy.optimize import curve_fit
 
 # Local library imports
-from utils.general_utils import get_b_values, get_stats_two_groups, compute_AIC, compute_BIC
+from utils.general_utils import *
 from utils.plot_utils import *
 from settings.plot_settings import *
 from settings.prop_settings import *
@@ -12,209 +12,45 @@ from settings.prop_settings import *
 # #############################################################################
 # Functions
 # #############################################################################
+# Assign stimulus phases ######################################################
+def assign_phases(median_df, t_transient=2, t_steady_start=10, t_steady_end=20):
+    # Assign phases
+    median_df['phase'] = 'other'
+    # # Control
+    median_df.loc[(median_df['time'] >= 0 + t_steady_start) & (median_df['time'] < 0 + t_steady_end), 'phase'] = 'control'
+    median_df.loc[(median_df['time'] >= 90 + t_steady_start) & (median_df['time'] < 90 + t_steady_end), 'phase'] = 'control'
+    median_df.loc[(median_df['time'] >= 120 + t_steady_start) & (median_df['time'] < 120 + t_steady_end), 'phase'] = 'control'
+    median_df.loc[(median_df['time'] >= 210 + t_steady_start) & (median_df['time'] < 210 + t_steady_end), 'phase'] = 'control'
+    # # Transient
+    median_df.loc[(median_df['time'] >= 30) & (median_df['time'] < 30 + t_transient), 'phase'] = 'transient'
+    median_df.loc[(median_df['time'] >= 90) & (median_df['time'] < 90 + t_transient), 'phase'] = 'transient_right'
+    median_df.loc[(median_df['time'] >= 150) & (median_df['time'] < 150 + t_transient), 'phase'] = 'transient'
+    median_df.loc[(median_df['time'] >= 210) & (median_df['time'] < 210 + t_transient), 'phase'] = 'transient_right'
+    # # Steady-state
+    median_df.loc[(median_df['time'] >= 30 + t_steady_start) & (median_df['time'] < 30 + t_steady_end), 'phase'] = 'steady'
+    median_df.loc[(median_df['time'] >= 60 + t_steady_start) & (median_df['time'] < 60 + t_steady_end), 'phase'] = 'steady_right'
+    median_df.loc[(median_df['time'] >= 150 + t_steady_start) & (median_df['time'] < 150 + t_steady_end), 'phase'] = 'steady_right'
+    median_df.loc[(median_df['time'] >= 180 + t_steady_start) & (median_df['time'] < 180 + t_steady_end), 'phase'] = 'steady'
+
+    # Flip around 50% such that right is always bright
+    median_df['phase_values'] = median_df['percentage_left'].values
+    median_df.loc[(median_df['phase'] == 'transient_right'), 'phase_values'] = -1 * (median_df.loc[(median_df['phase'] == 'transient_right'), 'phase_values'] - 50) + 50
+    median_df.loc[(median_df['phase'] == 'steady_right'), 'phase_values'] = -1 * (median_df.loc[(median_df['phase'] == 'steady_right'), 'phase_values'] - 50) + 50
+    # Rename phases
+    median_df.loc[(median_df['phase'] == 'transient_right'), 'phase'] = 'transient'
+    median_df.loc[(median_df['phase'] == 'steady_right'), 'phase'] = 'steady'
+
+    # Compute mean within individuals and phase
+    return (
+        median_df
+        .loc[(median_df['phase'] != 'other')]
+        .groupby(['fish_genotype', 'fish_age', 'experiment_ID', 'phase'])['phase_values']
+        .mean()
+    )
+
+
 # Fit models ##################################################################
 def fit_spatial_temporal_model(
-    median_df, agents, prop_classes,
-    t_ns, b_left_ns, b_right_ns,
-    path_to_fig_folder=None,
-    dt_hat=1  # s, bin size of data
-):
-    # Ensure agents and prop_classes are iterable
-    if not isinstance(agents, list):
-        agents = [agents]
-    if not isinstance(prop_classes, list):
-        prop_classes = [prop_classes]
-
-    # Ensure data is same length as t_ns
-    # min_t, max_t = min(t_ns), max(t_ns)
-    # median_df = median_df.query(f'{min_t} <= time < {max_t}')
-    max_t = max(t_ns)
-    median_df = median_df.query(f'time < {max_t}')
-
-    ind_meta_fit_results = []
-    mean_meta_fit_results = []
-    meta_fit_index = [
-        'prop_name', 'dist_name', 'bin_name',
-        'fish_age', 'fish_genotype',
-        'experiment_ID', 'par_name',
-    ]
-
-    for j, agent in enumerate(agents):
-        # Select data for this agent
-        agent_df = median_df.query(agent.query)
-
-        for prop_class in prop_classes:
-            print(f"\tFitting {prop_class.prop_name} | {agent.name} ", end='')
-
-            # Fit mean over individuals ###########################################
-            group = agent_df.groupby('time')[prop_class.prop_name]
-            mean = group.mean()
-            std = group.std()
-            ts = mean.index
-            ts_hat = np.arange(t_ns[0] + dt_hat / 2, t_ns[-1] + dt_hat / 2, dt_hat)
-            fish_age = agent_df.index.unique('fish_age')[0]
-            fish_genotype = agent_df.index.unique('fish_genotype')[0]
-            exp_ID = 0
-
-            # Exclude all time stamps where mean is nan
-            ts_hat = ts_hat[~np.isnan(mean)]
-            mean = mean[~np.isnan(mean)]
-
-            # Set Spatial-temporal model
-            model = prop_class.model
-            model.set_stimulus(ts_hat, t_ns, b_left_ns, b_right_ns)
-
-            # First optimization
-            try:
-                res = curve_fit(
-                    f=model.fitfunc,
-                    xdata=ts_hat, ydata=mean,
-                    p0=model.x0,
-                    bounds=model.bounds_curve_fit,
-                    nan_policy='omit',
-                )
-                mean_meta_popt = res[0]
-            except Exception as e:
-                # Print in red
-                print(f"\t\033[91mfit_spatial_temporal_model(): curve_fit error {e}\033[0m")
-                continue
-
-            # Compute MSE and AIC
-            n_par = len(model.par_names)
-            model.set_stimulus(ts_hat, t_ns, b_left_ns, b_right_ns)
-            b_left, b_right = get_b_values(ts_hat, t_ns, b_left_ns, b_right_ns)  # shift by dt to correct for binning
-            y_hat = model.eval_cont(b_left, b_right, dt_hat, *mean_meta_popt)
-            _error_dict = {
-                'MSE': np.mean((mean.values - y_hat) ** 2),
-                'AIC': compute_AIC(mean.values, y_hat, n_par),
-                'BIC': compute_BIC(mean.values, y_hat, n_par),
-                'n_par': n_par,
-            }
-
-            # Store fit results as dictionary
-            _index_dict = dict(zip(meta_fit_index, [
-                prop_class.prop_name, prop_class.dist_name, prop_class.prop_name,
-                fish_age, fish_genotype, exp_ID, 'median',
-            ]))
-            _popt_dict = dict(zip(model.par_names, mean_meta_popt))
-            mean_meta_fit_results.append({**_index_dict, **_popt_dict, **_error_dict})
-
-            # Inspect result
-            if isinstance(path_to_fig_folder, Path):
-                # Get brightness values
-                b_left, b_right = get_b_values(ts_hat, t_ns, b_left_ns, b_right_ns)    # shift by dt to correct for binning
-                y_hat = model.eval_cont(b_left, b_right, dt_hat, *mean_meta_popt)
-                fig, ax = plt.subplots(1, 1)
-                ax.plot(ts, mean, '.-', color=agent.color, label='data')
-                ax.plot(ts_hat, y_hat, '--', color=COLOR_MODEL, label='fit')
-                hide_spines(ax)
-                set_lims(ax, [0, 270], prop_class.par_lims[0])
-                set_labels(ax, 'Time (s)', f'{prop_class.label}\n({prop_class.unit})')
-                set_axlines(ax, axhlines=prop_class.prop_axlines)
-                set_ticks(ax,
-                          x_ticks=np.arange(0, 270 + 1, 30), x_ticksize=0,
-                          y_ticks=prop_class.par_ticks[0], y_ticksize=5, )
-                add_stimulus_bar(ax, t_ns, b_left_ns, b_right_ns)
-                savefig(fig, path_to_fig_folder.joinpath(f'fit_spatial_temporal_model', f'{prop_class.prop_name}_mean_{agent.name}.pdf'), close_fig=True)
-
-            # Fit individuals #####################################################
-            grouped = agent_df.groupby(['fish_age', 'fish_genotype', 'experiment_ID'])
-            for idx, exp_df in grouped:
-                fish_age, fish_genotype, exp_ID = idx
-
-                # Drop NaN values
-                exp_df.dropna(subset=[prop_class.prop_name], inplace=True)
-                exp_df.sort_values('time', inplace=True)
-                y = exp_df[prop_class.prop_name].values
-                ts = exp_df['time'].values
-                ts_hat = ts + dt_hat/2
-
-                # # Get number of non-nan datapoints from y
-                # if np.count_nonzero(~np.isnan(y)) <= 100:
-                #     print(f"Skipping {agent.name} {exp_ID:03d}: too few data points")
-                #     continue
-
-                # Exclude all time stamps where mean is nan
-                ts_hat = ts_hat[~np.isnan(y)]
-                y = y[~np.isnan(y)]
-
-                # Set Spatial-temporal model
-                model = prop_class.model
-                model.set_stimulus(ts_hat, t_ns, b_left_ns, b_right_ns)
-
-                # First optimization
-                try:
-                    res = curve_fit(
-                        f=model.fitfunc,
-                        xdata=ts_hat, ydata=y,
-                        p0=model.x0,
-                        bounds=model.bounds_curve_fit,
-                    )
-                    ind_meta_popt = res[0]
-                except Exception as e:
-                    print(f"\tfit_spatial_temporal_model(): curve_fit error {agent.name} {exp_ID:03d}: {e}")
-                    continue
-
-                # Compute MSE and AIC
-                n_par = len(model.par_names)
-                b_left, b_right = get_b_values(ts_hat, t_ns, b_left_ns, b_right_ns)  # shift by dt to correct for binning
-                y_hat = model.eval_cont(b_left, b_right, dt_hat, *ind_meta_popt)
-                _error_dict = {
-                    'MSE': np.mean((y - y_hat) ** 2),
-                    'AIC': compute_AIC(y, y_hat, n_par),
-                    'BIC': compute_BIC(y, y_hat, n_par),
-                    'n_par': n_par,
-                }
-
-                # Store fit results as dictionary
-                _index_dict = dict(zip(meta_fit_index, [
-                    prop_class.prop_name, prop_class.dist_name, prop_class.prop_name,
-                    fish_age, fish_genotype, exp_ID, 'median',
-                ]))
-                _popt_dict = dict(zip(model.par_names, ind_meta_popt))
-                ind_meta_fit_results.append({**_index_dict, **_popt_dict, **_error_dict})
-
-                # # Plot individual results
-                # if isinstance(path_to_fig_folder, Path):
-                #     b_left, b_right = get_b_values(ts_hat, t_ns, b_left_ns, b_right_ns)
-                #     y_hat = model.eval(b_left, b_right, dt_hat, *ind_meta_popt)
-                #     fig, ax = plt.subplots(1, 1)
-                #     ax.plot(ts, y, '.', color=agent.color, label='data')
-                #     ax.plot(ts_hat, y_hat, '--', color=COLOR_MODEL, label='fit')
-                #     hide_spines(ax)
-                #     set_lims(ax, [0, 270], prop_class.par_lims[0])
-                #     set_labels(ax, 'Time (s)', f'{prop_class.label}\n({prop_class.unit})')
-                #     set_axlines(ax, axhlines=prop_class.prop_axlines)
-                #     set_ticks(ax,
-                #               x_ticks=np.arange(0, 270 + 1, 30), x_ticksize=0,
-                #               y_ticks=prop_class.par_ticks[0], y_ticksize=5, )
-                #     savefig(
-                #         fig,
-                #         path_to_fig_folder.joinpath(
-                #             f'fit_spatial_temporal_model',
-                #             f'{prop_class.prop_name}_{agent.name}',
-                #             f'{prop_class.prop_name}_{exp_ID:03d}.pdf'),
-                #         close_fig=True,
-                #     )
-
-            print(f"\033[92mdone\033[0m")
-
-    # Create dataframe of meta fit results ####################################
-    # Fit to individual fish
-    ind_meta_fit_df = pd.DataFrame(ind_meta_fit_results).set_index(meta_fit_index).sort_index()
-    # Fit to mean over fish
-    mean_meta_fit_df = pd.DataFrame(mean_meta_fit_results).set_index(meta_fit_index).sort_index()
-    # Mean over fits to individual fish
-    groupby_labels = ['prop_name', 'dist_name', 'bin_name', 'fish_age', 'fish_genotype', 'par_name', ]
-    mean_ind_meta_fit_df = ind_meta_fit_df.groupby(groupby_labels).mean()
-    # # Update index to match mean_meta_fit_df
-    mean_ind_meta_fit_df['experiment_ID'] = 0
-    mean_ind_meta_fit_df.set_index('experiment_ID', append=True, inplace=True)
-
-    return ind_meta_fit_df, mean_ind_meta_fit_df, mean_meta_fit_df,
-
-
-def fit_spatial_temporal_model_v2(
         median_df, agents,
         prop_classes, models,
         t_ns, b_left_ns, b_right_ns,
@@ -290,12 +126,13 @@ def fit_spatial_temporal_model_v2(
                 n_par = len(model.par_names)
                 # model.set_stimulus(ts_hat, t_ns, b_left_ns, b_right_ns)
                 b_left, b_right = get_b_values(ts_hat, t_ns, b_left_ns, b_right_ns)  # shift by dt to correct for binning
+                y_true = mean.values
                 y_hat = model.eval_cont(b_left, b_right, dt_hat, *mean_meta_popt)
                 _error_dict = {
-                    'MSE': np.mean((mean.values - y_hat) ** 2),
-                    'RMSE': np.sqrt(np.mean((mean.values - y_hat) ** 2)),
-                    'AIC': compute_AIC(mean.values, y_hat, n_par),
-                    'BIC': compute_BIC(mean.values, y_hat, n_par),
+                    'MSE': np.mean((y_true - y_hat) ** 2),
+                    'RMSE': np.sqrt(np.mean((y_true - y_hat) ** 2)),
+                    'AIC': compute_AIC_timeseries(y_true, y_hat, n_par),
+                    'BIC': compute_BIC_timeseries(y_true, y_hat, n_par),
                     'n_par': n_par,
                 }
 
@@ -370,8 +207,8 @@ def fit_spatial_temporal_model_v2(
                     _error_dict = {
                         'MSE': np.mean((y - y_hat) ** 2),
                         'RMSE': np.sqrt(np.mean((y - y_hat) ** 2)),
-                        'AIC': compute_AIC(y, y_hat, n_par),
-                        'BIC': compute_BIC(y, y_hat, n_par),
+                        'AIC': compute_AIC_timeseries(y, y_hat, n_par),
+                        'BIC': compute_BIC_timeseries(y, y_hat, n_par),
                         'n_par': n_par,
                     }
 
@@ -421,6 +258,31 @@ def fit_spatial_temporal_model_v2(
     mean_ind_meta_fit_df.set_index('experiment_ID', append=True, inplace=True)
 
     return ind_meta_fit_df, mean_ind_meta_fit_df, mean_meta_fit_df,
+
+
+def compute_AIC_timeseries(y_true, y_pred, k):
+    if isinstance(k, type(None)):
+        return np.nan
+
+    logL = compute_log_likelihood_timeseries(y_true, y_pred)
+    return 2 * k - 2 * logL
+
+
+def compute_BIC_timeseries(y_true, y_pred, k):
+    if isinstance(k, type(None)):
+        return np.nan
+
+    logL = compute_log_likelihood_timeseries(y_true, y_pred)
+    n_datapoints = len(y_true)
+    return k * np.log(n_datapoints) - 2 * logL
+
+
+def compute_log_likelihood_timeseries(y_true, y_pred):
+    residuals = y_true - y_pred
+    sigma2 = np.var(residuals, ddof=1)  # Unbiased estimate
+    n = len(y_true)
+    log_likelihood = -n / 2 * np.log(2 * np.pi * sigma2) - np.sum(residuals**2) / (2 * sigma2)
+    return log_likelihood
 
 
 # Plot functions ##############################################################
@@ -713,7 +575,6 @@ def plot_fit_errors(
     return fig
 
 
-
 def plot_fitted_pars_obs(
         ind_meta_fit_df, mean_ind_meta_fit_df, mean_meta_fit_df,
         prop_class, agents,
@@ -871,289 +732,6 @@ def concat_values(
     return p_left_all, ts_all, b_left_all, b_right_all
 
 
-def fit_spatial_temporal_model_integrator(
-    median_df, agents, prop_classes,
-    t_intervals,
-    # TODO: implement this
-    path_to_fig_folder=None,
-):
-    # Ensure agents, prop_classes is iterable
-    if not isinstance(agents, list):
-        agents = [agents]
-    if not isinstance(prop_classes, list):
-        prop_classes = [prop_classes]
-
-    # rename fish_age 26 to 27 for plotting
-    median_df.rename(index={26: 27}, level='fish_age', inplace=True)
-
-    ind_meta_fit_results = []
-    mean_meta_fit_results = []
-    meta_fit_index = [
-        'prop_name', 'dist_name', 'bin_name',
-        'fish_age', 'fish_genotype',
-        'experiment_ID', 'par_name',
-    ]
-
-    # Specify time for plotting
-    dt_hat = 1  # s, bin size of data
-    ts_hat = np.arange(-20 + dt_hat/2, 10 + dt_hat/2, dt_hat)
-
-    for j, agent in enumerate(agents):
-        # Select data for this agent, limit time window
-        agent_df = median_df.query(agent.query).query('-20 <= time < 10')
-
-        for prop_class in prop_classes:
-            print(f"\tFitting {prop_class.prop_name} | {agent.name} ", end='')
-            model = prop_class.model
-
-            # Fit mean over individuals ###########################################
-            fish_age = agent_df.index.unique('fish_age')[0]
-            fish_genotype = agent_df.index.unique('fish_genotype')[0]
-            exp_ID = 0
-
-            # Concatenate values
-            p_left_all, ts_all, b_left_all, b_right_all = concat_values(agent_df, prop_class, t_intervals)
-            p_left_flat = np.reshape(p_left_all, -1)
-            t_flat = np.reshape(ts_all, -1)
-
-            # Set Spatial-temporal model
-            def fit_wrapper(
-                    x,
-                    tau_lpf,
-                    w_repulsor_pos, w_repulsor_neg, w_attractor,
-            ):
-                model = prop_class.model
-                y_hat = []
-                for b_left, b_right in zip(b_left_all, b_right_all):
-                    y_hat.append(model.eval_cont(
-                        b_left, b_right, dt_hat,
-                        tau_lpf,
-                        w_repulsor_pos, w_repulsor_neg, w_attractor,
-                    ))
-
-                return np.reshape(y_hat, -1)
-
-            res = curve_fit(
-                f=fit_wrapper,
-                xdata=t_flat, ydata=p_left_flat,
-                p0=model.x0, bounds=model.bounds_curve_fit,
-            )
-            mean_meta_popt = res[0]
-
-            # Store fit results as dictionary
-            _index_dict = dict(zip(meta_fit_index, [
-                prop_class.prop_name, prop_class.dist_name, prop_class.prop_name,
-                fish_age, fish_genotype, exp_ID, 'median',
-            ]))
-            _popt_dict = dict(zip(model.par_names, mean_meta_popt))
-            mean_meta_fit_results.append({**_index_dict, **_popt_dict})
-
-            # Fit individuals #################################################
-            grouped = agent_df.groupby(['fish_age', 'fish_genotype', 'experiment_ID'])
-            for idx, exp_df in grouped:
-                fish_age, fish_genotype, exp_ID = idx
-
-                # Concatenate values
-                p_left_all, ts_all, b_left_all, b_right_all = concat_values(exp_df, prop_class, t_intervals)
-                try:
-                    p_left_flat = np.reshape(p_left_all, -1)
-                    t_flat = np.reshape(ts_all, -1)
-                except Exception as e:
-                    print(f"\tfit_spatial_temporal_model_integrator(): Error reshaping {agent.name} {exp_ID:03d}: {e}")
-                    continue
-
-                try:
-                    res = curve_fit(
-                        f=fit_wrapper,
-                        xdata=t_flat, ydata=p_left_flat,
-                        p0=model.x0, bounds=model.bounds_curve_fit,
-                    )
-                    ind_meta_popt = res[0]
-                except Exception as e:
-                    print(f"\tfit_spatial_temporal_model_integrator(): Error fitting {agent.name} {exp_ID:03d}: {e}")
-                    continue
-                except RuntimeWarning as e:
-                    print(f"\tfit_spatial_temporal_model_integrator(): RuntimeWarning fitting {agent.name} {exp_ID:03d}: {e}")
-                    continue
-
-                # Store fit results as dictionary
-                _index_dict = dict(zip(meta_fit_index, [
-                    prop_class.prop_name, prop_class.dist_name, prop_class.prop_name,
-                    fish_age, fish_genotype, exp_ID, 'median',
-                ]))
-                _popt_dict = dict(zip(model.par_names, ind_meta_popt))
-                ind_meta_fit_results.append({**_index_dict, **_popt_dict})
-
-    # Create dataframe of meta fit results ####################################
-    # Fit to mean over fish
-    mean_meta_fit_df = pd.DataFrame(mean_meta_fit_results)
-    mean_meta_fit_df.set_index(meta_fit_index, inplace=True)
-    mean_meta_fit_df.sort_index(inplace=True)
-
-    # Fit to individual fish
-    ind_meta_fit_df = pd.DataFrame(ind_meta_fit_results)
-    ind_meta_fit_df.set_index(meta_fit_index, inplace=True)
-    ind_meta_fit_df.sort_index(inplace=True)
-
-    # Mean over fits to individual fish
-    mean_ind_meta_fit_df = (
-        ind_meta_fit_df
-        .rename(index={26: 27}, level='fish_age')  # rename fish_age 26 to 27 for plotting
-        .groupby([
-            'prop_name', 'dist_name', 'bin_name',
-            'fish_age', 'fish_genotype',
-            'par_name',
-        ])
-        .mean()
-    )
-    # # Update index to match mean_meta_fit_df
-    mean_ind_meta_fit_df['experiment_ID'] = 0
-    mean_ind_meta_fit_df.set_index('experiment_ID', append=True, inplace=True)
-
-    return ind_meta_fit_df, mean_ind_meta_fit_df, mean_meta_fit_df
-
-
-def fit_spatial_temporal_model_integrator_v2(
-        median_df, agents,
-        prop_classes, models,
-        t_intervals,
-        path_to_fig_folder=None,
-        dt_hat=1  # s, bin size of data
-):
-    # Ensure agents, prop_classes, models is iterable
-    if not isinstance(agents, list):
-        agents = [agents]
-    if not isinstance(prop_classes, list):
-        prop_classes = [prop_classes]
-    if not isinstance(models, list):
-        models = [models]
-
-    # rename fish_age 26 to 27 for plotting
-    median_df.rename(index={26: 27}, level='fish_age', inplace=True)
-
-    ind_meta_fit_results = []
-    mean_meta_fit_results = []
-    meta_fit_index = [
-        'prop_name', 'dist_name', 'bin_name',
-        'fish_age', 'fish_genotype',
-        'experiment_ID',
-        'model_name', 'par_name',
-    ]
-
-    for j, agent in enumerate(agents):
-        # Select data for this agent, limit time window
-        agent_df = median_df.query(agent.query).query('-5 <= time < 10')
-        ts_hat = np.arange(-5 + dt_hat / 2, 10 + dt_hat / 2, dt_hat)
-        ts_hat = np.arange(-5 + dt_hat, 10 + dt_hat / 2, dt_hat)
-
-        for prop_class in prop_classes:
-            print(f"\tFitting {agent.name} {prop_class.prop_name} | ", end='')
-            for model in models:
-                print(f"{model.name} | ", end='')
-
-                # Fit mean over individuals ###########################################
-                fish_age = agent_df.index.unique('fish_age')[0]
-                fish_genotype = agent_df.index.unique('fish_genotype')[0]
-                exp_ID = 0
-
-                # Concatenate values
-                p_left_all, ts_all, b_left_all, b_right_all = concat_values(agent_df, prop_class, t_intervals)
-                p_left_flat = np.reshape(p_left_all, -1)
-                t_flat = np.reshape(ts_all, -1)
-
-                # Load stimulus
-                model.set_stimulus_integrator(ts_all, b_left_all, b_right_all)
-                # Set bounds (can be property specific)
-                model.set_bounds(prop_class.prop_name)
-
-                res = curve_fit(
-                    f=model.fitfunc_integrator,
-                    xdata=t_flat, ydata=p_left_flat,
-                    p0=model.x0, bounds=model.bounds_curve_fit,
-                )
-                mean_meta_popt = res[0]
-
-                # Store fit results as dictionary
-                _index_dict = dict(zip(meta_fit_index, [
-                    prop_class.prop_name, prop_class.dist_name, prop_class.prop_name,
-                    fish_age, fish_genotype, exp_ID, model.name, 'median',
-                ]))
-                _popt_dict = dict(zip(model.par_names, mean_meta_popt))
-                mean_meta_fit_results.append({**_index_dict, **_popt_dict})
-
-                # Inspect result
-                if isinstance(path_to_fig_folder, Path):
-                    for p_left, ts, b_left, b_right in zip(p_left_all, ts_all, b_left_all, b_right_all):
-                        fig, ax = plt.subplots(1, 1)
-                        y_hat = model.eval_cont(b_left, b_right, dt_hat, *mean_meta_popt)
-
-                        ax.plot(ts, p_left, '.-', color=agent.color, label='data')
-                        ax.plot(ts_hat, y_hat, '--', color=COLOR_MODEL, label='fit')
-
-                        ax.plot(ts, b_left / 10, '-', color='tab:blue', label='b_left')
-                        ax.plot(ts, b_right / 10, '-', color='tab:red', label='b_right')
-
-                        hide_spines(ax)
-                        # set_lims(ax, [-10, 10], prop_class.par_lims[0])
-                        set_labels(ax, 'Time (s)', f'{prop_class.label}\n({prop_class.unit})')
-                        set_axlines(ax, axhlines=prop_class.prop_axlines, axvlines=0)
-                        # set_ticks(ax,
-                        #           x_ticks=np.arange(-10, 10 + 1, 10), x_ticksize=0,
-                        #           y_ticks=prop_class.par_ticks[0], y_ticksize=5, )
-                    savefig(fig, path_to_fig_folder.joinpath(f'fit_spatial_temporal_model', f'{prop_class.prop_name}_mean_{agent.name}.pdf'), close_fig=True)
-
-                # Fit individuals #################################################
-                grouped = agent_df.groupby(['fish_age', 'fish_genotype', 'experiment_ID'])
-                for idx, exp_df in grouped:
-                    fish_age, fish_genotype, exp_ID = idx
-
-                    # Concatenate values
-                    p_left_all, ts_all, b_left_all, b_right_all = concat_values(exp_df, prop_class, t_intervals)
-                    try:
-                        p_left_flat = np.reshape(p_left_all, -1)
-                        t_flat = np.reshape(ts_all, -1)
-                    except Exception as e:
-                        print(f"\tfit_spatial_temporal_model_integrator(): Error reshaping {agent.name} {exp_ID:03d}: {e}")
-                        continue
-
-                    try:
-                        res = curve_fit(
-                            f=model.fitfunc_integrator,
-                            xdata=t_flat, ydata=p_left_flat,
-                            p0=model.x0, bounds=model.bounds_curve_fit,
-                        )
-                        ind_meta_popt = res[0]
-                    except Exception as e:
-                        print(f"\tfit_spatial_temporal_model_integrator(): Error fitting {agent.name} {exp_ID:03d}: {e}")
-                        continue
-                    except RuntimeWarning as e:
-                        print(f"\tfit_spatial_temporal_model_integrator(): RuntimeWarning fitting {agent.name} {exp_ID:03d}: {e}")
-                        continue
-
-                    # Store fit results as dictionary
-                    _index_dict = dict(zip(meta_fit_index, [
-                        prop_class.prop_name, prop_class.dist_name, prop_class.prop_name,
-                        fish_age, fish_genotype, exp_ID, model.name, 'median',
-                    ]))
-                    _popt_dict = dict(zip(model.par_names, ind_meta_popt))
-                    ind_meta_fit_results.append({**_index_dict, **_popt_dict})
-            print(f"\033[92mdone\033[0m")
-
-    # Create dataframe of meta fit results ####################################
-    # Fit to individual fish
-    ind_meta_fit_df = pd.DataFrame(ind_meta_fit_results).set_index(meta_fit_index).sort_index()
-    # Fit to mean over fish
-    mean_meta_fit_df = pd.DataFrame(mean_meta_fit_results).set_index(meta_fit_index).sort_index()
-    # Mean over fits to individual fish
-    groupby_labels = ['prop_name', 'dist_name', 'bin_name', 'fish_age', 'fish_genotype', 'model_name', 'par_name', ]
-    mean_ind_meta_fit_df = ind_meta_fit_df.groupby(groupby_labels).mean()
-    # # Update index to match mean_meta_fit_df
-    mean_ind_meta_fit_df['experiment_ID'] = 0
-    mean_ind_meta_fit_df.set_index('experiment_ID', append=True, inplace=True)
-
-    return ind_meta_fit_df, mean_ind_meta_fit_df, mean_meta_fit_df,
-
-
 def get_peaks(median_df, fit_df, agents, model, t_intervals, dt=1/60):
     prop_class = PercentageLeft()
 
@@ -1167,7 +745,7 @@ def get_peaks(median_df, fit_df, agents, model, t_intervals, dt=1/60):
         fish_age = agent_df.index.unique('fish_age')[0]
         fish_genotype = agent_df.index.unique('fish_genotype')[0]
 
-        # Get fitted parameters for this agent
+        # Get fitted parameters for this agent, fitted on data Fig 3B.
         meta_popt = (
             fit_df
             .query(agent.query)
@@ -1219,25 +797,16 @@ def get_peaks(median_df, fit_df, agents, model, t_intervals, dt=1/60):
             ts = np.arange(-20, 30, dt)
             t_intervals_model = np.arange(0, 10 + dt, dt)
             peak_loc = np.searchsorted(ts, 0, side='right')
-            # peaks = []
             for l, t_interval in enumerate(t_intervals_model):
-                # Set color
-                color = agent.cmap((l + 1) / (len(t_intervals_model) + 1))
-
                 # # Generate brightness values
                 t_ns = np.asarray([-20, 0 - t_interval, 0, 100])
                 b_left, b_right = get_b_values(ts, t_ns, b_left_ns, b_right_ns)
 
-                # # Evaluate model
+                # # Evaluate model, fitted on data Fig 3B.
                 y_hat = model.eval_cont(b_left, b_right, dt, *meta_popt)
 
                 # # Find position of peak
                 peak_mean = y_hat[peak_loc]
-                # peaks.append(y_hat[peak_loc])
-
-                # fig2 = plt.figure()
-                # plt.plot(ts, y_hat)
-                # plt.plot(ts[peak_loc], peak_mean, 'o')
 
                 # Append result
                 peak_results.append({

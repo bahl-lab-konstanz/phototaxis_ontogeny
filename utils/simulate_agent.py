@@ -85,6 +85,14 @@ class MyAgent:
         self.turn_angle_class = TurnAngle()
         self.bout_duration_class = TotalDuration()
         self.displacement_class = Distance()
+        # Create list to access all swim property classes
+        self.prop_classes = [
+            self.percentage_turns_class,
+            self.percentage_left_class,
+            self.turn_angle_class,
+            self.bout_duration_class,
+            self.displacement_class,
+        ]
         # Prepare dictionaries for model parameters
         self.meta_popt_dict = {
             self.percentage_turns_class.prop_name: {},
@@ -359,7 +367,7 @@ class MyAgent:
             # prop_genotype is fixed value and already given
             return prop_genotype
         elif prop_genotype == 'blind':
-            x = 150
+            x = self.agent_state_variables['blind_lux']
             model_type = 'log'  # Use log model for blind
         elif prop_genotype == 'homogeneous' or prop_genotype == 'azimuth' or prop_genotype == 'azimuth_virtual':
             x = self.agent_state_variables['homogeneous_lux']
@@ -485,6 +493,7 @@ class MyAgent:
         self.agent_state_variables['accumulated_path'] = 0         # cm
         self.agent_state_variables['accumulated_orientation'] = 0  # deg
         # # Agent eye brightness. Start at 150 lux
+        self.agent_state_variables['blind_lux'] = 150        # lux
         self.agent_state_variables['homogeneous_lux'] = 150  # lux
         self.agent_state_variables['temporal_lux'] = 150     # lux
         self.agent_state_variables['abs_contrast_lux'] = 0       # lux
@@ -655,7 +664,7 @@ class MyAgent:
     @jit(nopython=True)
     def get_agent_speed(bout_start_speed: float, time_since_last_bout: float, speed_decay: float):
         """returns agent speed as exponential decay of initial speed with time constant speed_decay"""
-        return bout_start_speed * np.exp(-1 * time_since_last_bout / speed_decay)  # arena unit/s
+        return bout_start_speed * np.exp(-1 * time_since_last_bout / speed_decay)  # cm/s
 
     # Boundary conditions #####################################################
     @staticmethod
@@ -683,8 +692,8 @@ class MyAgent:
         sign = np.sign(a1 * b2 - a2 * b1)
 
         # Update orientation
-        ang_deg_new = np.rad2deg(phi) - sign * ang_deg_new  # deg
-        theta_new = np.deg2rad(ang_deg_new)
+        ang_deg_out = np.rad2deg(phi) - sign * ang_deg_new  # deg
+        theta_new = np.deg2rad(ang_deg_out)
 
         # Update x and y coordinates: shift agent back along phi-line
         x_new = r_new * np.cos(phi)
@@ -707,7 +716,7 @@ class MyAgent:
         # plt.gca().set_aspect('equal')
         # plt.show()
 
-        return x_new, y_new, ang_deg_new
+        return x_new, y_new, ang_deg_out
 
     def get_current_coordinates(self):
         """Returns the agent's current position and orientation.

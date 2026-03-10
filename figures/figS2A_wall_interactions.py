@@ -14,7 +14,7 @@ from settings.general_settings import *
 from settings.stim_arena_locked import *
 
 # Paths
-path_to_fig_folder = path_to_main_fig_folder.joinpath('figS2_wall_interactions')
+path_to_fig_folder = path_to_main_fig_folder.joinpath('figS2', 'A_wall_interactions')
 path_to_fig_folder.mkdir(exist_ok=True)
 
 # Agents

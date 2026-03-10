@@ -13,7 +13,7 @@ from utils.models import FullModelFig2and3
 
 
 # Paths
-path_to_fig_folder = path_to_main_fig_folder.joinpath(f'figS6_extended_model')
+path_to_fig_folder = path_to_main_fig_folder.joinpath(f'figS6')
 path_to_fig_folder.mkdir(exist_ok=True)
 
 # Agents
@@ -23,7 +23,7 @@ agents_str = '_and_'.join([agent.name for agent in agents])
 
 # Models
 model = FullModelFig2and3()
-hdf5_file = path_to_fig_folder.joinpath(f'fit_df_{model.name}.hdf5')
+hdf5_file = path_to_main_data_folder.joinpath('models', f'fit_df_{model.name}.hdf5')
 
 # #############################################################################
 # Load fig2 data
@@ -61,7 +61,7 @@ dt1 = 1  # Placeholder, not used in this dataset
 # Load fig3 data
 # #############################################################################
 from settings.stim_brightness_choice_simple import *
-path_to_fig3_data = path_to_main_fig_folder.joinpath(f'fig3_{experiment_name}', 'models', 'median_df_bootstrapped.hdf5')
+path_to_fig3_data = path_to_main_fig_folder.joinpath(f'fig3', 'models', 'median_df_bootstrapped.hdf5')
 median_fig3_df = pd.read_hdf(path_to_fig3_data, key='median_df')
 
 # Prepare input data for dataset 2 (time series)

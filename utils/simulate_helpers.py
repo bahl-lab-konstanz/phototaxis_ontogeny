@@ -224,16 +224,27 @@ def load_stimulus(experiment_name, dt, r_max=6, nbins=256, c_min=1, c_mid=300, c
             'center_dark_outside_bright',
             'center_bright_outside_dark',
         ]
-    elif experiment_name == 'arena_locked_quick':
+    elif experiment_name == 'debugging':
+        do_fish_lock = False
+        t_max = 60     # s
+        n_trials = 2    # number of trials per stimulus, per agent
+        stim_names = [
+            'control',
+            # 'splitview_left_dark_right_bright',
+            # 'azimuth_left_dark_right_bright',
+            # 'center_dark_outside_bright',
+            # 'center_bright_outside_dark',
+        ]
+    elif experiment_name == 'testing':
         do_fish_lock = False
         t_max = 600     # s
         n_trials = 2    # number of trials per stimulus, per agent
         stim_names = [
-            'control',
-            'splitview_left_dark_right_bright',
-            'azimuth_left_dark_right_bright',
-            'center_dark_outside_bright',
-            'center_bright_outside_dark',
+            # 'control',
+            # 'splitview_left_dark_right_bright',
+            'azimuth_left_dark_right_bright_virtual_yes',
+            # 'center_dark_outside_bright',
+            # 'center_bright_outside_dark',
         ]
     elif experiment_name == 'arena_locked_flip':
         do_fish_lock = False
@@ -394,7 +405,7 @@ def get_stim_fish_locked(stim_name, ts):
         b_right = np.ones_like(ts) * right_brightness
     elif 'up' in stim_name:
         # Temporal ############################################################
-        # transition_1 = int(stim_name.split('0lux_'))  # TODO
+        # transition_1 = int(stim_name.split('0lux_'))
         # Start at 0 lux
         b_left = np.ones_like(ts) * 0
         b_right = np.ones_like(ts) * 0

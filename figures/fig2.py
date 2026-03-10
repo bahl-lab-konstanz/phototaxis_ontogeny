@@ -13,7 +13,7 @@ from settings.general_settings import path_to_main_fig_folder, path_to_main_data
 # User settings
 # #############################################################################
 stim_name = 'azimuth_left_dark_right_bright_virtual_yes'
-path_name = 'arena_locked'
+path_name = 'fig1_and_4'
 
 stim_dict = {   # Stimuli to plot
     stim_name: {
@@ -30,12 +30,13 @@ agents_str = '_and_'.join([agent.name for agent in agents])
 
 # Paths
 path_to_fig_folder = path_to_main_fig_folder.joinpath(f'fig2')
+path_to_fig_S2C_folder = path_to_main_fig_folder.joinpath(f'figS2', 'C_log_vs_lin')
 path_to_fig_folder.mkdir(exist_ok=True)
-hdf5_file = path_to_fig_folder.joinpath(f'fit_df_{stim_name}.hdf5')
+hdf5_file = path_to_main_data_folder.joinpath('models', f'fit_df_{stim_name}.hdf5')
 key_base = stim_name
 
 # Create new stat str and file
-stat_str = (f'Statistics for figure 2 {stim_name} {agents[0].name} and {agents[1].name}\n'
+stat_str = (f'Statistics for figure 2 {stim_name} {agents_str}\n'
             f'\t{datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")}')
 path_to_stat_file = path_to_fig_folder.joinpath(f'stats_{stim_name}.txt')
 
@@ -82,7 +83,7 @@ fig = plot_orientation_change_dist(
     event_df,
     agents, turn_threshold
 )
-savefig(fig, path_to_fig_folder.joinpath(f'orientation_change_dist', f'{stim_name}.pdf'), close_fig=True)
+savefig(fig, path_to_fig_folder.joinpath(f'fig2D.pdf'), close_fig=True)
 
 # #############################################################################
 # Retrieve median_df
@@ -92,7 +93,7 @@ median_df = get_median_df(event_df, bin_name)
 # #########################################################################
 # Fit model as function of brightness
 # #########################################################################
-ind_meta_fit_df, mean_ind_meta_fit_df, mean_meta_fit_df = fit_model(
+ind_meta_fit_df, mean_ind_meta_fit_df, mean_meta_fit_df = fit_models(
     median_df, agents, prop_classes,
     col_name, bin_name, model_names,
 )
@@ -110,9 +111,10 @@ fig = plot_median(
     agents, prop_classes,
     bin_name, model_name=None,
     label=label, ticks=brightness_bin_ticks, tick_labels=brightness_bin_tick_labels,
+    x_lim=[-5, 305],
 )
 fig.suptitle(f'{stim_name} | {col_name}')
-savefig(fig, path_to_fig_folder.joinpath('median', f'{stim_name}.pdf'), close_fig=True)
+savefig(fig, path_to_fig_folder.joinpath('fig2E', f'{stim_name}.pdf'), close_fig=True)
 
 # Include fit
 for model_name in model_names:
@@ -121,9 +123,10 @@ for model_name in model_names:
         agents, prop_classes,
         bin_name, model_name,
         label=label, ticks=brightness_bin_ticks, tick_labels=brightness_bin_tick_labels,
+        x_lim=[-5, 305],
     )
     fig.suptitle(f'{stim_name} | {col_name} | {model_name}')
-    savefig(fig, path_to_fig_folder.joinpath('median', f'{stim_name}_{model_name}.pdf'), close_fig=True)
+    savefig(fig, path_to_fig_folder.joinpath('fig2E', f'{stim_name}_{model_name}.pdf'), close_fig=True)
 
 # Plot fitted parameter values ############################################
 for model_name in model_names:
@@ -136,13 +139,17 @@ for model_name in model_names:
     stat_str += _stat_str
     for fig, meta_par_name in zip(figs, meta_par_names):
         fig.suptitle(f'{stim_name} | {col_name} | {model_name} | {meta_par_name}')
-        savefig(fig, path_to_fig_folder.joinpath('params', f'{stim_name}_{model_name}_{meta_par_name}.pdf'), close_fig=True)
+        savefig(fig, path_to_fig_folder.joinpath('fig2G', f'{stim_name}_{model_name}_{meta_par_name}.pdf'), close_fig=True)
+
+# Compare models #############################################################
+model_df = compare_models(median_df, agents, prop_classes, bin_name, model_names)
+fig = plot_model_comparison(model_df, agents, model_labels=['Log', 'Linear'])
+savefig(fig, path_to_fig_S2C_folder.joinpath(f'log_vs_linear.pdf'))
 
 # Print statistics and store to file ##########################################
 # print(stat_str)
 with open(path_to_stat_file, "w") as text_file:
     text_file.write(stat_str)
-
 
 # Plot midline distribution ###################################################
 fig, ax = plot_midline_length(event_df)
@@ -248,8 +255,8 @@ set_aspect(ax, 'equal')
 add_scalebar_horizontal(ax, size=1, label='1 cm')
 hide_all_spines_and_ticks(ax)
 
-savefig(fig, path_to_fig_folder.joinpath('example', 'example_trajectory.pdf'), close_fig=False)
-savefig(fig, path_to_fig_folder.joinpath('example', 'example_trajectory.png'), close_fig=True)
+savefig(fig, path_to_fig_folder.joinpath('fig2C.pdf'), close_fig=False)
+savefig(fig, path_to_fig_folder.joinpath('fig2C.png'), close_fig=True)
 
 # #############################################################################
 # Legend

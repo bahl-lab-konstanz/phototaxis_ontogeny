@@ -157,10 +157,12 @@ def get_median_df(event_df, bin_name, groupby_labels=None):
             'arena_index', 'setup_index', 'folder_name',
         ]
 
+    # Remove time columns since they are not meaningful anymore
+    event_df.drop(columns=['time', 'time_absolute'], inplace=True, errors='ignore')
+
+    # Compute median within groups
     group = event_df.groupby(groupby_labels + [bin_name], observed=True)
     median_df = group.median()
-    # Remove time columns since they are not meaningful anymore
-    median_df.drop(columns=['time', 'time_absolute'], inplace=True)
 
     # Compute number of turns and ratio of left turns
     percentage_turn_df = (group['left_events'].sum() + group['right_events'].sum()) / group['left_events'].size() * 100
@@ -250,12 +252,41 @@ def p_value_to_stars(p_value: float):
     return None
 
 
+def cohens_d_to_text(d: float):
+    if d is not None and not np.isnan(d):
+        if abs(d) < 0.2:
+            return "negligible"
+        elif abs(d) < 0.5:
+            return "small"
+        elif abs(d) < 0.8:
+            return "medium"
+        else:
+            return "large"
+    return None
+
+
 def get_stats_two_groups(name0, name1, group0, group1, n_boot=10_000):
     stat_str = ''
     stat_dict = {}
 
+    # Remove NaN values
+    group0 = group0.dropna()
+    group1 = group1.dropna()
+
+    # Compute Cohen's d
+    x1 = np.mean(group0)
+    x2 = np.mean(group1)
+    n1 = len(group0)
+    n2 = len(group1)
+    s1 = np.std(group0)
+    s2 = np.std(group1)
+    pooled_sd = np.sqrt(((n1 - 1) * s1 ** 2 + (n2 - 1) * s2 ** 2) / (n1 + n2 - 2))
+    d = (x1 - x2) / pooled_sd if pooled_sd > 0 else np.nan
+    stat_str += f"\tCohen's d: {d:.2f} ({cohens_d_to_text(d)})\n"
+    stat_dict['Cohens d'] = {'d': d, 'd_text': cohens_d_to_text(d)}
+
     # Rank tests
-    # # Compare age groups: Mann-Whitney U test
+    # # Compare groups: Mann-Whitney U test
     m_stat, m_p_value = mannwhitneyu(group0, group1, alternative='two-sided')  # data is not normally distributed
     stat_str += f"\tMann-Whitney U test\n"
     stat_str += f"\t\t{p_value_to_stars(m_p_value)}\tp={m_p_value: .5f}\tstat={m_stat: .2f}\t{name0} vs. {name1}\n"
@@ -338,23 +369,8 @@ def get_stats_two_groups(name0, name1, group0, group1, n_boot=10_000):
     return stat_str, stat_dict
 
 
-def compute_log_likelihood(y_true, y_pred):
-    residuals = y_true - y_pred
-    sigma2 = np.var(residuals, ddof=1)  # Unbiased estimate
-    n = len(y_true)
-    log_likelihood = -n / 2 * np.log(2 * np.pi * sigma2) - np.sum(residuals**2) / (2 * sigma2)
-    return log_likelihood
-
-
-def compute_AIC(y_true, y_pred, k):
-    logL = compute_log_likelihood(y_true, y_pred)
-    return 2 * k - 2 * logL
-
-
-def compute_BIC(y_true, y_pred, k):
-    logL = compute_log_likelihood(y_true, y_pred)
-    n_datapoints = len(y_true)
-    return k * np.log(n_datapoints) - 2 * logL
+def compute_logl_prob_data(y_true, y_pred):
+    return np.nansum((y_true - y_pred) ** 2, axis=3)
 
 
 # #############################################################################
@@ -366,6 +382,10 @@ def log_model(x, a, b):
 
 def my_double_linear(x, a_pos, a_neg, b):
     return np.where(x >= 0, a_pos * x + b, a_neg * x + b)
+
+
+def my_double_log(x, a_pos, a_neg, b):
+    return np.where(x >= 0, a_pos * np.log(x) + b, a_neg * np.log(-x) + b)
 
 
 # #############################################################################

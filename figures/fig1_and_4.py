@@ -10,356 +10,289 @@ from utils.general_utils import load_tracking_df
 # #############################################################################
 # Paths
 experiment_name = 'arena_locked'
-path_name = experiment_name
-
-
-path_to_fig_folder = path_to_main_fig_folder.joinpath(f'fig1_{experiment_name}')
-path_to_stats_file = path_to_fig_folder.joinpath(f'stats_250612.hdf5')
+path_name = 'fig1_and_4'
+path_to_fig_folder = path_to_main_fig_folder.joinpath(path_name)
 path_to_stats_txt = path_to_fig_folder.joinpath('stats.txt')
 
+# Specify agents (comment out either Larva/Juvie or LarvaAgent/JuvieAgent)
+agents = [Larva(), Juvie()]
+vmin, vmax = ref_vmin, ref_vmax
+vmin_diff, vmax_diff = -0.8, 0.8
+example_IDs = [100, 433]  # Larva, Juvie
+# agents = [LarvaAgent(), JuvieAgent()]
+# vmin, vmax = test_vmin, test_vmax
+# vmin_diff, vmax_diff = -0.4, 0.4
+# example_IDs = [[44, 44, 92, 92], [62, 93, 87, 55]]   # Larval agent, Juvenile agent
 
-stats_columns = [
-    'ref_agent', 'test_agent', 'stimulus', 'bin',
-    'do_subtract_control', 'do_bootstrap', 'i_bootstrap',
-    'KL', 'SSD', 'Z-score', 'MSE'
-]
-
-# Specify agents ##############################################################
-ref_agents = [Larva(), Juvie()]
-ref_agents_str = '_'.join([agent.name for agent in ref_agents])
-
-agent_genotypes = [
-    # 'model_ptB_plB_aB_tB_sB',
-    # 'A_B_A_A_A',
-    # 'model_ptAV_plAV_aAV_tAV_sAV',
-    # 'B_C_B_B_B',
-    # 'B_D_B_B_B',
-    # 'B_DC_B_B_B',
-    'model_ptAV_plST_aAV_tAV_sAV',
-    # 'model_ptT_plT_aT_tT_sT',
-    # 'DA_DA_DA_DA_DA',
-    # 'superfit',
-    # 'A_DC_A_A_A',
-    # 'A_DC_A_A_A_wCx5',
-]
-
-# Plot stimuli ################################################################
-fig = plot_stimuli(stim_dict)
-savefig(fig, path_to_fig_folder.joinpath('stimuli.pdf'), close_fig=True)
+agents_str = '_'.join([agent.name for agent in agents])
 
 # #############################################################################
-# Load and prepare reference data
+# Load and prepare data
 # #############################################################################
-full_ref_tracking_df = load_tracking_df(path_to_main_data_folder, path_name, ref_agents)
-
-if full_ref_tracking_df.empty:
-    raise UserWarning(f"Skipping {ref_agents_str}: \033[91mno data\033[0m")
+full_tracking_df = load_tracking_df(path_to_main_data_folder, path_name, agents)
 
 # Remove values too close to the wall
-ref_tracking_df = full_ref_tracking_df.loc[full_ref_tracking_df['radius'] <= 5].copy()
-
-# Print number of reference agents
-# n_ref_fish = get_n_fish(ref_tracking_df, ref_agents)
-stat_str = ''
+tracking_df = full_tracking_df.loc[full_tracking_df['radius'] <= 5].copy()
 
 # Compute swim properties
-ref_tracking_df, ref_median_ind_df, ref_std_ind_df, n_frames = compute_bins(ref_tracking_df)
-ref_x_df, ref_x_ind_df = compute_swim_properties_tracking(ref_tracking_df, n_frames, ['x_bin'])
-ref_radius_df, ref_radius_ind_df = compute_swim_properties_tracking(ref_tracking_df, n_frames, ['radius_bin'])
-ref_azimuth_df, ref_azimuth_ind_df = compute_swim_properties_tracking(ref_tracking_df, n_frames, ['azimuth_bin'])
+tracking_df, median_ind_df, std_ind_df, n_frames = compute_bins(tracking_df)
+x_df, x_ind_df = compute_swim_properties_tracking(tracking_df, n_frames, ['x_bin'])
+radius_df, radius_ind_df = compute_swim_properties_tracking(tracking_df, n_frames, ['radius_bin'])
+azimuth_df, azimuth_ind_df = compute_swim_properties_tracking(tracking_df, n_frames, ['azimuth_bin'])
 
 # #############################################################################
-# Plot trajectories, 1D and 2D density
+# Create separate figure for trajectories (store as png)
 # #############################################################################
-# # Plot trajectories ###########################################################
-# plot_all_trajectories(full_ref_tracking_df, ref_agents, stim_dict, path_to_fig_folder)
-# for k, (agent, exp_ID) in enumerate(zip([Larva(), Juvie()], [100, 433])):
-#     fig = plot_exp_trajectories(full_ref_tracking_df.xs(exp_ID, level='experiment_ID').query(agent.query), agent, stim_dict, k)
-#     savefig(fig, path_to_fig_folder.joinpath('trajectories', 'examples', f'trajectory_{agent.name}.png'), close_fig=False)
-#     savefig(fig, path_to_fig_folder.joinpath('trajectories', 'examples', f'trajectory_{agent.name}.pdf'), close_fig=True)
-#
-# # Plot 2D density hexbins #####################################################
-# fig, cbars = plot_2d_density(ref_tracking_df, ref_agents, stim_dict, vmin=ref_vmin, vmax=ref_vmax)
-# savefig(fig, path_to_fig_folder.joinpath('2D_density', f'2D_{ref_agents_str}.pdf'), close_fig=True)
-# savefig(cbars[0], path_to_fig_folder.joinpath('cbar', f'2D_{ref_agents[0].name}.pdf'), close_fig=True)
-# savefig(cbars[1], path_to_fig_folder.joinpath('cbar', f'2D_{ref_agents[1].name}.pdf'), close_fig=True)
-# # Plot 2D density difference hexbins
-# fig, cbar = plot_2d_density_diff(ref_tracking_df, ref_agents, stim_dict, vmin=-1, vmax=1)
-# savefig(fig, path_to_fig_folder.joinpath('2D_density_dff', f'2D_diff_{ref_agents_str}.pdf'), close_fig=True)
-# savefig(cbar, path_to_fig_folder.joinpath('cbar', f'2D_diff_{ref_agents_str}.pdf'), close_fig=True)
+print(f"{datetime.datetime.now().strftime('%H:%M:%S')} Plotting trajectories...")
+fig = create_figure(fig_width=fig_width_cm, fig_height=2*small_grid_y)
 
-# Plot agents separately and together
-figs1 = plot_1d_density(ref_agents[0], stim_dict, ref_x_df, ref_radius_df, ref_azimuth_df)
-savefig(figs1[0], path_to_fig_folder.joinpath('1D_density', f'1D_{ref_agents[0].name}.pdf'), close_fig=True)
-savefig(figs1[1], path_to_fig_folder.joinpath('1D_density_control', f'1D_{ref_agents[0].name}.pdf'), close_fig=True)
-savefig(figs1[2], path_to_fig_folder.joinpath('1D_density_chance', f'1D_{ref_agents[0].name}.pdf'), close_fig=True)
+j = 1
+# Loop over agents
+for k, (agent, exp_ID) in enumerate(zip(agents, example_IDs)):
 
-figs2 = plot_1d_density(ref_agents[1], stim_dict, ref_x_df, ref_radius_df, ref_azimuth_df, )
-savefig(figs2[0], path_to_fig_folder.joinpath('1D_density', f'1D_{ref_agents[1].name}.pdf'), close_fig=True)
-savefig(figs2[1], path_to_fig_folder.joinpath('1D_density_control', f'1D_{ref_agents[1].name}.pdf'), close_fig=True)
-savefig(figs2[2], path_to_fig_folder.joinpath('1D_density_chance', f'1D_{ref_agents[1].name}.pdf'), close_fig=True)
+    # Ensure we have an exp_ID for each stimulus
+    if isinstance(exp_ID, int):
+        exp_IDs = [exp_ID] * 4
+    else:
+        exp_IDs = exp_ID
 
-figs3 = plot_1d_density(ref_agents, stim_dict, ref_x_df, ref_radius_df, ref_azimuth_df, )
-savefig(figs3[0], path_to_fig_folder.joinpath('1D_density', f'1D_{ref_agents_str}.pdf'), close_fig=True)
-savefig(figs3[1], path_to_fig_folder.joinpath('1D_density_control', f'1D_{ref_agents_str}.pdf'), close_fig=True)
-savefig(figs3[2], path_to_fig_folder.joinpath('1D_density_chance', f'1D_{ref_agents_str}.pdf'), close_fig=True)
+    # Loop over stimuli
+    for i, (stim_values, exp_ID) in enumerate(zip(stim_dict.values(), exp_IDs)):
+        stim_name = stim_values['stim_name']
+        print(f"Plotting trajectories: {agent.name} {stim_name} {exp_ID}", end='\r')
+        exp_df = full_tracking_df.xs(exp_ID, level='experiment_ID').query(agent.query)
 
-# Plot agents together for supplementary figure 5
-figs4 = plot_1d_density(ref_agents, stim_dict, ref_x_df, ref_radius_df, ref_azimuth_df, ax_x_cm=3, )
-savefig(figs4[0], path_to_fig_folder.joinpath('figS5', '1D_density', f'1D_{ref_agents_str}.pdf'), close_fig=True)
-savefig(figs4[1], path_to_fig_folder.joinpath('figS5', '1D_density_control', f'1D_{ref_agents_str}.pdf'), close_fig=True)
-savefig(figs4[2], path_to_fig_folder.joinpath('figS5', '1D_density_chance', f'1D_{ref_agents_str}.pdf'), close_fig=True)
+        if i >= 4:
+            break
 
-# Plot for all bins
-figs = plot_1d_density_all_bins(ref_agents[0], stim_dict,  ref_x_df, ref_radius_df, ref_azimuth_df, )
-savefig(figs[0], path_to_fig_folder.joinpath('figS1', '1D_density_all', f'1D_{ref_agents[0].name}.pdf'), close_fig=True)
-savefig(figs[1], path_to_fig_folder.joinpath('figS1', '1D_density_all_control', f'1D_{ref_agents[0].name}.pdf'), close_fig=True)
-savefig(figs[2], path_to_fig_folder.joinpath('figS1', '1D_density_all_chance', f'1D_{ref_agents[0].name}.pdf'), close_fig=True)
+        # Add axes
+        l, b, w, h = (
+            small_grid_x * (3*i + k + 1),
+            small_grid_y * j,
+            small_grid_x - pad,
+            small_grid_y - pad,
+        )
+        ax = add_axes(fig, l, b, w, h)
 
-figs = plot_1d_density_all_bins(ref_agents[1], stim_dict,  ref_x_df, ref_radius_df, ref_azimuth_df, )
-savefig(figs[0], path_to_fig_folder.joinpath('figS1', '1D_density_all', f'1D_{ref_agents[1].name}.pdf'), close_fig=True)
-savefig(figs[1], path_to_fig_folder.joinpath('figS1', '1D_density_all_control', f'1D_{ref_agents[1].name}.pdf'), close_fig=True)
-savefig(figs[2], path_to_fig_folder.joinpath('figS1', '1D_density_all_chance', f'1D_{ref_agents[1].name}.pdf'), close_fig=True)
+        # Plot trajectory
+        plot_single_trajectory(ax, exp_df, stim_name, agent)
 
-figs = plot_1d_density_all_bins(ref_agents, stim_dict,  ref_x_df, ref_radius_df, ref_azimuth_df, )
-savefig(figs[0], path_to_fig_folder.joinpath('figS1', '1D_density_all', f'1D_{ref_agents_str}.pdf'), close_fig=True)
-savefig(figs[1], path_to_fig_folder.joinpath('figS1', '1D_density_all_control', f'1D_{ref_agents_str}.pdf'), close_fig=True)
-savefig(figs[2], path_to_fig_folder.joinpath('figS1', '1D_density_all_chance', f'1D_{ref_agents_str}.pdf'), close_fig=True)
+# Add scalebar in separate ax
+l, b, w, h = (
+    small_grid_x * (3 * i + k + 2),
+    small_grid_y * j,
+    small_grid_x - pad,
+    small_grid_y - pad,
+)
+ax = add_axes(fig, l, b, w, h)
 
-# Include individual lines
-figs = plot_1d_density(ref_agents[0], stim_dict, ref_x_df, ref_radius_df, ref_azimuth_df, ref_x_ind_df, ref_radius_ind_df, ref_azimuth_ind_df)
-savefig(figs[0], path_to_fig_folder.joinpath('figS1', '1D_density_ind', f'1D_{ref_agents[0].name}.pdf'), close_fig=True)
-savefig(figs[1], path_to_fig_folder.joinpath('figS1', '1D_density_control_ind', f'1D_{ref_agents[0].name}.pdf'), close_fig=True)
-savefig(figs[2], path_to_fig_folder.joinpath('figS1', '1D_density_chance_ind', f'1D_{ref_agents[0].name}.pdf'), close_fig=True)
+set_lims(ax, [-6, 6], [-6, 6])
+hide_all_spines_and_ticks(ax)
+set_aspect(ax, 'equal')
+add_scalebar(ax, size=1, label='1 cm', loc='lower center')
 
-figs = plot_1d_density(ref_agents[1], stim_dict, ref_x_df, ref_radius_df, ref_azimuth_df, ref_x_ind_df, ref_radius_ind_df, ref_azimuth_ind_df)
-savefig(figs[0], path_to_fig_folder.joinpath('figS1', '1D_density_ind', f'1D_{ref_agents[1].name}.pdf'), close_fig=True)
-savefig(figs[1], path_to_fig_folder.joinpath('figS1', '1D_density_control_ind', f'1D_{ref_agents[1].name}.pdf'), close_fig=True)
-savefig(figs[2], path_to_fig_folder.joinpath('figS1', '1D_density_chance_ind', f'1D_{ref_agents[1].name}.pdf'), close_fig=True)
-
-# Separate plot for figure S1
-fig = plot_1d_density_fig_s1(ref_agents, stim_dict, ref_x_df, ref_radius_df, ref_azimuth_df)
-savefig(fig, path_to_fig_folder.joinpath('figS1', f'1D_{ref_agents_str}.pdf'), close_fig=True)
-
-# Separate plot for figure 2
-path_to_fig2_folder = path_to_main_fig_folder.joinpath('fig2')
-figs4 = plot_1d_density(ref_agents, stim_dict_fig2, ref_x_df, ref_radius_df, ref_azimuth_df, ref_stim_name='azimuth_left_dark_right_bright')
-savefig(figs4[0], path_to_fig2_folder.joinpath('2B', f'1D_{ref_agents_str}.pdf'), close_fig=True)
-savefig(figs4[1], path_to_fig2_folder.joinpath('2B', f'1D_{ref_agents_str}_control.pdf'), close_fig=True)
-savefig(figs4[2], path_to_fig2_folder.joinpath('2B', f'1D_{ref_agents_str}_chance.pdf'), close_fig=True)
+# Save figure #################################################################
+print("\tSaving figure: ", end='')
+savefig(fig, path_to_fig_folder.joinpath(f'trajectories_{agents_str}.png'), close_fig=True)
+print("\033[92mdone\033[0m")
 
 # #############################################################################
-# Statistics
+# Create figure
 # #############################################################################
-# Quantify midline length and brightness preference
-fig = plot_midline_stats(ref_median_ind_df, ref_agents, stim_dict, )
-savefig(fig, path_to_fig_folder.joinpath('figS1', f'midlines_{ref_agents_str}.pdf'), close_fig=True)
+print(f"{datetime.datetime.now().strftime('%H:%M:%S')} Plotting main figure...")
+fig = create_figure(fig_width=fig_width_cm, fig_height=fig_height_cm)
 
-# Compute statistics based on mean within fish ################################
-bin_stats_list, stat_df, stat_str = get_bin_stats(ref_median_ind_df, ref_agents, stim_dict)
+# Illustrate stimuli ##########################################################
+j = 7
+# Loop over stimuli
+for i, stim_values in enumerate(stim_dict.values()):
+    if i >= 4:
+        break
+
+    # Add axes
+    l, b, w, h = (
+        small_grid_x * (3*i + 2),
+        small_grid_y * j,
+        small_grid_x - pad,
+        small_grid_y - pad,
+    )
+    ax = add_axes(fig, l, b, w, h)
+
+    # Extract stimulus settings
+    stim_name = stim_values['stim_name']
+    plot_stimulus_ax(ax, stim_name)
+
+# Plot 2D density hexbins #####################################################
+# Loop over agents
+for k, agent in enumerate(agents):
+    agent_tracking_df = tracking_df.query(agent.query)
+    stim_names = agent_tracking_df.index.unique('stimulus_name')
+
+    # Compute control density histogram for 2d density difference
+    print("\tComputing control density histogram: ", end='')
+    control_array = compute_2d_density_stim(agent_tracking_df, stim_name='control')
+    print("\033[92mdone\033[0m")
+
+    # Loop over stimuli
+    for i, stim_values in enumerate(stim_dict.values()):
+        if i >= 4:
+            break
+        stim_name = stim_values['stim_name']
+        print(f"\tPlotting 2D density bins: {agent.name} {stim_name}", end='\r')
+
+        # Get data for this stimulus
+        stim_df = agent_tracking_df.xs(stim_name, level='stimulus_name').copy()
+        n_fish_stim = stim_df.index.unique('experiment_ID').size
+
+        # Plot 2D density hexbins #############################################
+        j = 6
+        # Add axes
+        l, b, w, h = (
+            small_grid_x * (3*i + k + 1),
+            small_grid_y * j,
+            small_grid_x - pad,
+            small_grid_y - pad,
+        )
+        ax = add_axes(fig, l, b, w, h)
+
+        # Plot 2D density
+        cbar = plot_2d_density_ax(ax, stim_df, n_fish_stim, agent, vmin=vmin, vmax=vmax)
+
+        # Store colorbar separately
+        savefig(cbar, path_to_fig_folder.joinpath(f'colorbar_{agent.name}.pdf'), close_fig=True)
+
+        # Plot 2D density SEM hexbins #########################################
+        j = 5
+        # Add axes
+        l, b, w, h = (
+            small_grid_x * (3*i + k + 1),
+            small_grid_y * j,
+            small_grid_x - pad,
+            small_grid_y - pad,
+        )
+        ax = add_axes(fig, l, b, w, h)
+
+        # Plot 2D density SEM
+        cbar = plot_2d_density_sem_ax(ax, stim_df, n_fish_stim, agent, vmin=vmin, vmax=vmax)
+
+        # Store colorbar separately
+        savefig(cbar, path_to_fig_folder.joinpath(f'colorbar_sem_{agent.name}.pdf'), close_fig=True)
+
+        # Plot 2D density difference hexbins ##################################
+        j = 4
+        # Add axes
+        l, b, w, h = (
+            small_grid_x * (3 * i + k + 1),
+            small_grid_y * j,
+            small_grid_x - pad,
+            small_grid_y - pad,
+        )
+        ax = add_axes(fig, l, b, w, h)
+
+        # Plot 2D density difference
+        cbar = plot_2d_density_diff_ax(ax, stim_df, n_fish_stim, control_array, vmin_diff, vmax_diff)
+
+        # Store colorbar separately
+        savefig(cbar, path_to_fig_folder.joinpath(f'colorbar_dif_{agent.name}.pdf'), close_fig=True)
+
+# Add scalebar in separate ax
+j = 5
+i = 3
+l, b, w, h = (
+    small_grid_x * (3 * i + k + 2),
+    small_grid_y * j,
+    small_grid_x - pad,
+    small_grid_y - pad,
+)
+ax = add_axes(fig, l, b, w, h)
+
+set_lims(ax, [-6, 6], [-6, 6])
+hide_all_spines_and_ticks(ax)
+set_aspect(ax, 'equal')
+add_scalebar(ax, size=1, label='1 cm', loc='lower center')
+
+print(f"\tPlotting 2D density bins: \033[92mdone\033[0m")
+
+# Plot 1D density histograms ##################################################
+do_subtract = 'control'
+ref_stim_name = None
+
+# Loop over stimuli
+for i, stim_values in enumerate(stim_dict.values()):
+    if i >= 4:
+        break
+    stim_name = stim_values['stim_name']
+    print(f"\tPlotting 1D density bins: {stim_name}", end='\r')
+
+    j = 3
+    # Add axes
+    l, b, w, h = (
+        small_grid_x * (3 * i + 1),
+        small_grid_y * j,
+        2*small_grid_x - pad,
+        small_grid_y - pad,
+    )
+    ax = add_axes(fig, l, b, w, h)
+
+    plot_1d_density_ax(
+        ax, agents, stim_name, stim_values, do_subtract,
+        x_df, radius_df, azimuth_df,
+    )
+
+print(f"Plotting 1D density bins: \033[92mdone\033[0m")
+
+# Plot statistics based on mean within fish ###################################
+print("Computing statistics:", end='')
+bin_stats_list, stat_df, stat_str = get_bin_stats(median_ind_df, agents, stim_dict)
 # Store statistics txt file
 with open(path_to_stats_txt, 'a+') as output:
     output.write(stat_str)
+print(f"\033[92mdone\033[0m")
 
-# Plot and store
-fig = plot_bin_stats(ref_median_ind_df, stat_df, ref_agents, stim_dict)
-savefig(fig, path_to_fig_folder.joinpath('stats', f'stats_{ref_agents_str}.pdf'), close_fig=True)
-
-# Z-score and MSE #############################################################
-# Compute z-scores, MSE between reference agents
-stat_list = get_agent_zscores(
-        ref_agents[0], ref_agents[1], stim_dict,
-        ref_x_ind_df, ref_radius_ind_df, ref_azimuth_ind_df,
-)
-
-# Store stats_df with key for these agents
-stats_df = pd.DataFrame(stat_list, columns=stats_columns)
-stats_df.to_hdf(path_to_stats_file, key=ref_agents_str, mode='a')
-
-# #########################################################################
-# Loop over test agents
-# #########################################################################
-for agent_genotype in agent_genotypes:
-    larva_agent = LarvaAgent()
-    juvie_agent = JuvieAgent()
-    if not agent_genotype == 'model_ptAV_plST_aAV_tAV_sAV':
-        # Overwrite agent class for this genotype
-        larva_agent_name = f'{agent_genotype}_05dpf'
-        larva_agent.name = larva_agent_name
-        larva_agent.query = f'fish_age <= 5 and fish_genotype == "{agent_genotype.lower()}"'
-        juvie_agent_name = f'{agent_genotype}_27dpf'
-        juvie_agent.name = juvie_agent_name
-        juvie_agent.query = f'fish_age >= 21 and fish_genotype == "{agent_genotype.lower()}"'
-    test_agents = [larva_agent, juvie_agent]
-    test_agents_str = '_'.join([agent.name for agent in test_agents])
-
-    # Limit length of test_agents_str
-    test_agents_str = test_agents_str[:30]
-
-    # #########################################################################
-    # Load and prepare test data
-    # #########################################################################
-    full_test_tracking_df0 = load_tracking_df(path_to_main_data_folder, path_name, test_agents[0])
-    full_test_tracking_df1 = load_tracking_df(path_to_main_data_folder, path_name, test_agents[1])
-    if full_test_tracking_df0.empty:
-        print(f"Skipping {test_agents[0]}: \033[91mno data\033[0m")
-        continue
-    elif full_test_tracking_df1.empty:
-        print(f"Skipping {test_agents[1]}: \033[91mno data\033[0m")
-        continue
-
-    full_test_tracking_df = pd.concat([full_test_tracking_df0, full_test_tracking_df1])
-
-    # Remove values too close to the wall
-    test_tracking_df = full_test_tracking_df.loc[full_test_tracking_df['radius'] <= 5].copy()
-
-    # Keep same amount of trials as real fish
-    test_tracking_df = test_tracking_df.loc[test_tracking_df.index.get_level_values('trial') < 2].copy()
-
-    # Compute swim properties
-    test_tracking_df, test_median_ind_df, test_std_ind_df, n_frames = compute_bins(test_tracking_df)
-    test_x_df, test_x_ind_df = compute_swim_properties_tracking(test_tracking_df, n_frames, ['x_bin'])
-    test_radius_df, test_radius_ind_df = compute_swim_properties_tracking(test_tracking_df, n_frames, ['radius_bin'])
-    test_azimuth_df, test_azimuth_ind_df = compute_swim_properties_tracking(test_tracking_df, n_frames, ['azimuth_bin'])
-
-    # Combine reference and test data #########################################
-    x_df = pd.concat([ref_x_df, test_x_df])
-    radius_df = pd.concat([ref_radius_df, test_radius_df])
-    azimuth_df = pd.concat([ref_azimuth_df, test_azimuth_df])
-    x_ind_df = pd.concat([ref_x_ind_df, test_x_ind_df])
-    radius_ind_df = pd.concat([ref_radius_ind_df, test_radius_ind_df])
-    azimuth_ind_df = pd.concat([ref_azimuth_ind_df, test_azimuth_ind_df])
-
-    # #########################################################################
-    # Plot trajectories, 1D and 2D density
-    # #########################################################################
-    if agent_genotype == 'model_ptAV_plST_aAV_tAV_sAV':  # Proposed model
-        # Plot trajectories ###################################################
-        plot_all_trajectories(full_test_tracking_df, test_agents, stim_dict, path_to_fig_folder)
-        for k, (agent, exp_ID) in enumerate(zip(test_agents, [3, 14])):
-            fig = plot_exp_trajectories(full_test_tracking_df.xs(exp_ID, level='experiment_ID').query(agent.query), agent, stim_dict, k)
-            savefig(fig, path_to_fig_folder.joinpath('trajectories', 'examples', f'trajectory_{agent.name}.png'), close_fig=False)
-            savefig(fig, path_to_fig_folder.joinpath('trajectories', 'examples', f'trajectory_{agent.name}.pdf'), close_fig=True)
-
-        # Plot 2D density hexbins #############################################
-        fig, cbars = plot_2d_density(test_tracking_df, test_agents, stim_dict, vmin=test_vmin, vmax=test_vmax)
-        savefig(fig, path_to_fig_folder.joinpath('2D_density', f'2D_{test_agents_str}.pdf'), close_fig=True)
-        savefig(cbars[0], path_to_fig_folder.joinpath('cbar', f'2D_{test_agents[0].name}.pdf'), close_fig=True)
-        savefig(cbars[1], path_to_fig_folder.joinpath('cbar', f'2D_{test_agents[1].name}.pdf'), close_fig=True)
-
-        # Plot 2D density difference hexbins ##################################
-        fig, cbar = plot_2d_density_diff(test_tracking_df, test_agents, stim_dict)
-        savefig(fig, path_to_fig_folder.joinpath('2D_density_dff', f'2D_diff_{test_agents_str}.pdf'), close_fig=True)
-        savefig(cbar, path_to_fig_folder.joinpath('cbar', f'2D_diff_{test_agents_str}.pdf'), close_fig=True)
-
-    # Plot agents separately and together
-    figs = plot_1d_density(test_agents[0], stim_dict, test_x_df, test_radius_df, test_azimuth_df)
-    savefig(figs[0], path_to_fig_folder.joinpath('1D_density', f'1D_{test_agents[0].name}.pdf'), close_fig=True)
-    savefig(figs[1], path_to_fig_folder.joinpath('1D_density_control', f'1D_{test_agents[0].name}.pdf'), close_fig=True)
-    savefig(figs[2], path_to_fig_folder.joinpath('1D_density_chance', f'1D_{test_agents[0].name}.pdf'), close_fig=True)
-
-    figs = plot_1d_density(test_agents[1], stim_dict, test_x_df, test_radius_df, test_azimuth_df)
-    savefig(figs[0], path_to_fig_folder.joinpath('1D_density', f'1D_{test_agents[1].name}.pdf'), close_fig=True)
-    savefig(figs[1], path_to_fig_folder.joinpath('1D_density_control', f'1D_{test_agents[1].name}.pdf'), close_fig=True)
-    savefig(figs[2], path_to_fig_folder.joinpath('1D_density_chance', f'1D_{test_agents[1].name}.pdf'), close_fig=True)
-
-    figs = plot_1d_density(test_agents, stim_dict, test_x_df, test_radius_df, test_azimuth_df)
-    savefig(figs[0], path_to_fig_folder.joinpath('1D_density', f'1D_{test_agents_str}.pdf'), close_fig=True)
-    savefig(figs[1], path_to_fig_folder.joinpath('1D_density_control', f'1D_{test_agents_str}.pdf'), close_fig=True)
-    savefig(figs[2], path_to_fig_folder.joinpath('1D_density_chance', f'1D_{test_agents_str}.pdf'), close_fig=True)
-
-    # Plot agents with reference data
-    figs = plot_1d_density(test_agents + ref_agents, stim_dict, x_df, radius_df, azimuth_df)
-    savefig(figs[0], path_to_fig_folder.joinpath('1D_density', f'1D_{test_agents_str}_w_ref.pdf'), close_fig=True)
-    savefig(figs[1], path_to_fig_folder.joinpath('1D_density_control', f'1D_{test_agents_str}_w_ref.pdf'), close_fig=True)
-    savefig(figs[2], path_to_fig_folder.joinpath('1D_density_chance', f'1D_{test_agents_str}_w_ref.pdf'), close_fig=True)
-
-    figs = plot_1d_density([test_agents[0], ref_agents[0]], stim_dict, x_df, radius_df, azimuth_df)
-    savefig(figs[0], path_to_fig_folder.joinpath('1D_density', f'1D_{test_agents[0].name}_w_ref.pdf'), close_fig=True)
-    savefig(figs[1], path_to_fig_folder.joinpath('1D_density_control', f'1D_{test_agents[0].name}_w_ref.pdf'), close_fig=True)
-    savefig(figs[2], path_to_fig_folder.joinpath('1D_density_chance', f'1D_{test_agents[0].name}_w_ref.pdf'), close_fig=True)
-
-    figs = plot_1d_density([test_agents[1], ref_agents[1], ], stim_dict, x_df, radius_df, azimuth_df)
-    savefig(figs[0], path_to_fig_folder.joinpath('1D_density', f'1D_{test_agents[1].name}_w_ref.pdf'), close_fig=True)
-    savefig(figs[1], path_to_fig_folder.joinpath('1D_density_control', f'1D_{test_agents[1].name}_w_ref.pdf'), close_fig=True)
-    savefig(figs[2], path_to_fig_folder.joinpath('1D_density_chance', f'1D_{test_agents[1].name}_w_ref.pdf'), close_fig=True)
-
-    # Plot agents for supplementary figure 5
-    figs4 = plot_1d_density(test_agents, stim_dict, test_x_df, test_radius_df, test_azimuth_df, ax_x_cm=3, )
-    savefig(figs4[0], path_to_fig_folder.joinpath('figS5', '1D_density', f'1D_{test_agents_str}.pdf'), close_fig=True)
-    savefig(figs4[1], path_to_fig_folder.joinpath('figS5', '1D_density_control', f'1D_{test_agents_str}.pdf'), close_fig=True)
-    savefig(figs4[2], path_to_fig_folder.joinpath('figS5', '1D_density_chance', f'1D_{test_agents_str}.pdf'), close_fig=True)
-
-    figs5 = plot_1d_density(test_agents + ref_agents, stim_dict, x_df, radius_df, azimuth_df, ax_x_cm=3, )
-    savefig(figs5[0], path_to_fig_folder.joinpath('figS5', '1D_density', f'1D_{test_agents_str}_w_ref.pdf'), close_fig=True)
-    savefig(figs5[1], path_to_fig_folder.joinpath('figS5', '1D_density_control', f'1D_{test_agents_str}_w_ref.pdf'), close_fig=True)
-    savefig(figs5[2], path_to_fig_folder.joinpath('figS5', '1D_density_chance', f'1D_{test_agents_str}_w_ref.pdf'), close_fig=True)
-
-    figs5 = plot_1d_density([test_agents[0], ref_agents[0]], stim_dict, x_df, radius_df, azimuth_df, ax_x_cm=3, )
-    savefig(figs5[0], path_to_fig_folder.joinpath('figS5', '1D_density', f'1D_{test_agents[0].name}_w_ref.pdf'), close_fig=True)
-    savefig(figs5[1], path_to_fig_folder.joinpath('figS5', '1D_density_control', f'1D_{test_agents[0].name}_w_ref.pdf'), close_fig=True)
-    savefig(figs5[2], path_to_fig_folder.joinpath('figS5', '1D_density_chance', f'1D_{test_agents[0].name}_w_ref.pdf'), close_fig=True)
-
-    figs5 = plot_1d_density([test_agents[1], ref_agents[1]], stim_dict, x_df, radius_df, azimuth_df, ax_x_cm=3, )
-    savefig(figs5[0], path_to_fig_folder.joinpath('figS5', '1D_density', f'1D_{test_agents[1].name}_w_ref.pdf'), close_fig=True)
-    savefig(figs5[1], path_to_fig_folder.joinpath('figS5', '1D_density_control', f'1D_{test_agents[1].name}_w_ref.pdf'), close_fig=True)
-    savefig(figs5[2], path_to_fig_folder.joinpath('figS5', '1D_density_chance', f'1D_{test_agents[1].name}_w_ref.pdf'), close_fig=True)
-
-    # Plot for all bins
-    figs = plot_1d_density_all_bins(test_agents[0], stim_dict, test_x_df, test_radius_df, test_azimuth_df)
-    savefig(figs[0], path_to_fig_folder.joinpath('figS1', '1D_density_all', f'1D_{test_agents[0].name}.pdf'), close_fig=True)
-    savefig(figs[1], path_to_fig_folder.joinpath('figS1', '1D_density_all_control', f'1D_{test_agents[0].name}.pdf'), close_fig=True)
-    savefig(figs[2], path_to_fig_folder.joinpath('figS1', '1D_density_all_chance', f'1D_{test_agents[0].name}.pdf'), close_fig=True)
-
-    figs = plot_1d_density_all_bins(test_agents[1], stim_dict, test_x_df, test_radius_df, test_azimuth_df)
-    savefig(figs[0], path_to_fig_folder.joinpath('figS1', '1D_density_all', f'1D_{test_agents[1].name}.pdf'), close_fig=True)
-    savefig(figs[1], path_to_fig_folder.joinpath('figS1', '1D_density_all_control', f'1D_{test_agents[1].name}.pdf'), close_fig=True)
-    savefig(figs[2], path_to_fig_folder.joinpath('figS1', '1D_density_all_chance', f'1D_{test_agents[1].name}.pdf'), close_fig=True)
-
-    figs = plot_1d_density_all_bins(test_agents, stim_dict, test_x_df, test_radius_df, test_azimuth_df)
-    savefig(figs[0], path_to_fig_folder.joinpath('figS1', '1D_density_all', f'1D_{test_agents_str}.pdf'), close_fig=True)
-    savefig(figs[1], path_to_fig_folder.joinpath('figS1', '1D_density_all_control', f'1D_{test_agents_str}.pdf'), close_fig=True)
-    savefig(figs[2], path_to_fig_folder.joinpath('figS1', '1D_density_all_chance', f'1D_{test_agents_str}.pdf'), close_fig=True)
-
-    # Include individual lines
-    figs = plot_1d_density(test_agents[0], stim_dict, test_x_df, test_radius_df, test_azimuth_df, test_x_ind_df, test_radius_ind_df, test_azimuth_ind_df)
-    savefig(figs[0], path_to_fig_folder.joinpath('figS1', '1D_density_ind', f'1D_{test_agents[0].name}.pdf'), close_fig=True)
-    savefig(figs[1], path_to_fig_folder.joinpath('figS1', '1D_density_control_ind', f'1D_{test_agents[0].name}.pdf'), close_fig=True)
-    savefig(figs[2], path_to_fig_folder.joinpath('figS1', '1D_density_chance_ind', f'1D_{test_agents[0].name}.pdf'), close_fig=True)
-
-    figs = plot_1d_density(test_agents[1], stim_dict, test_x_df, test_radius_df, test_azimuth_df, test_x_ind_df, test_radius_ind_df, test_azimuth_ind_df)
-    savefig(figs[0], path_to_fig_folder.joinpath('figS1', '1D_density_ind', f'1D_{test_agents[1].name}.pdf'), close_fig=True)
-    savefig(figs[1], path_to_fig_folder.joinpath('figS1', '1D_density_control_ind', f'1D_{test_agents[1].name}.pdf'), close_fig=True)
-    savefig(figs[2], path_to_fig_folder.joinpath('figS1', '1D_density_chance_ind', f'1D_{test_agents[1].name}.pdf'), close_fig=True)
-
-    # #############################################################################
-    # Statistics
-    # #############################################################################
-    # Compute statistics based on mean within fish ############################
-    bin_stats_list, stat_df, stat_str = get_bin_stats(test_median_ind_df, test_agents, stim_dict)
-    # Store statistics txt file
-    with open(path_to_stats_txt, 'a+') as output:
-        output.write(stat_str)
-
-    # Plot and store
-    fig = plot_bin_stats(test_median_ind_df, stat_df, test_agents, stim_dict)
-    savefig(fig, path_to_fig_folder.joinpath('stats', f'stats_{test_agents_str}.pdf'), close_fig=True)
-
-    # Z-score and MSE #########################################################
-    # Between test_agent0 and its reference fish
-    stat_list_0 = get_agent_zscores(
-            test_agents[0].ref_agent, test_agents[0], stim_dict,
-            x_ind_df, radius_ind_df, azimuth_ind_df,
+print("Cohen's d values:")
+# Loop over stimuli
+for i, stim_values in enumerate(stim_dict.values()):
+    if i >= 4:
+        break
+    stim_name = stim_values['stim_name']
+    column_name = stim_values['column_name']
+    stim_label = stim_values['stim_label']
+    # Print statistics
+    # # Within agent, between stimulus and control
+    for agent in agents:
+        cohen_d = (stat_df
+                   .query(f'agent0 == "{agent.name}" and agent1 == "{agent.name}"')
+                   .query(f'stim0 == "{stim_name}" and stim1 == "control"')
+                   .query(f'column_name == "{column_name}"')
+                   ['cohen_d'].values[0]
+        )
+        print(f"\t{stim_label} vs Control {agent.label}:\t {cohens_d_to_text(cohen_d)} ({cohen_d:.2f})")
+    # # Within stimulus, between agents
+    cohen_d = (stat_df
+        .query(f'agent0 == "larva" and agent1 == "juvie"')
+        .query(f'stim0 == "{stim_name}" and stim1 == "{stim_name}"')
+        .query(f'column_name == "{column_name}"')
+    ['cohen_d'].values[0]
     )
+    print(f"\t{stim_label} Larvae vs Juveniles:\t {cohens_d_to_text(cohen_d)} ({cohen_d:.2f})")
 
-    # Between test_agent1 and its reference fish
-    stat_list_1 = get_agent_zscores(
-            test_agents[1].ref_agent, test_agents[1], stim_dict,
-            x_ind_df, radius_ind_df, azimuth_ind_df,
+    print(f"Plotting statistics: {stim_name}", end='\r')
+    # Add axes
+    j = 1
+    l, b, w, h = (
+        small_grid_x * (3 * i + 1),
+        small_grid_y * j,
+        2*small_grid_x - pad,
+        small_grid_y - pad,
     )
+    ax = add_axes(fig, l, b, w, h)
 
-    # Store as hdf with separate keys
-    stats_df_0 = pd.DataFrame(stat_list_0, columns=stats_columns)
-    stats_df_1 = pd.DataFrame(stat_list_1, columns=stats_columns)
-    stats_df_0.to_hdf(path_to_stats_file, key=test_agents[0].name, mode='a')
-    stats_df_1.to_hdf(path_to_stats_file, key=test_agents[1].name, mode='a')
+    plot_bin_stats_stripplot_ax(ax, median_ind_df, stat_df, agents, stim_values)
+
+print(f"Plotting statistics: \033[92mdone\033[0m")
+
+# Save figure #################################################################
+print("Saving figure: ", end='')
+savefig(fig, path_to_fig_folder.joinpath(f'main_{agents_str}.pdf'), close_fig=True)
+print("\033[92mdone\033[0m")
+

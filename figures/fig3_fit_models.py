@@ -1,4 +1,4 @@
-from fig3_helpers import fit_spatial_temporal_model_v2, plot_time_series, plot_params, plot_fit_errors
+from fig3_helpers import fit_spatial_temporal_model, plot_time_series, plot_params, plot_fit_errors
 
 
 from utils.general_utils import load_event_df, get_n_fish, get_median_df_time, get_stats_two_groups
@@ -16,8 +16,9 @@ from utils.models import *
 from settings.stim_brightness_choice_simple import *
 
 # Paths
-path_to_fig_folder = path_to_main_fig_folder.joinpath(f'fig3_{experiment_name}', 'models')
-path_to_fig_folder.mkdir(exist_ok=True)
+path_to_fig_folder = path_to_main_fig_folder.joinpath(f'fig3', 'models')
+path_to_fig_folder.mkdir(exist_ok=True, parents=True)
+path_to_stats_file = path_to_main_data_folder.joinpath('figS7').joinpath('stats_3.hdf5')
 
 # Agents
 agents = [Larva(), Juvie()]
@@ -58,7 +59,7 @@ models = [
 # Load and prepare data
 # #############################################################################
 # Load data
-event_df = load_event_df(path_to_main_data_folder, experiment_name, agents)
+event_df = load_event_df(path_to_main_data_folder, path_name, agents)
 
 # Get bootstrapped data #######################################################
 if path_to_fig_folder.joinpath('median_df_bootstrapped.hdf5').exists():
@@ -101,14 +102,14 @@ for model in models:
     # Define hdf5_file and check if it exists #################################
     # # Define hdf5 file based on key_base as model.name
     key_base = model.name
-    hdf5_file = path_to_fig_folder.joinpath('fit_dfs', f'fit_df_{model.name}.hdf5')
+    hdf5_file = path_to_main_data_folder.joinpath('models', f'fit_df_{key_base}.hdf5')
     path_to_fig_folder.joinpath('fit_dfs').mkdir(parents=True, exist_ok=True)
-    if hdf5_file.exists():
-        # Fit already performed and stored
-        continue
+    # if hdf5_file.exists():
+    #     # Fit already performed and stored
+    #     continue
 
     # Fit model ###############################################################
-    ind_fit_df, mean_over_ind_fit_df, mean_fit_df = fit_spatial_temporal_model_v2(
+    ind_fit_df, mean_over_ind_fit_df, mean_fit_df = fit_spatial_temporal_model(
         median_df, agents,
         prop_classes, model,
         t_ns, b_left_ns, b_right_ns,
@@ -126,8 +127,7 @@ mean_over_ind_fit_df_list = []
 mean_fit_df_list = []
 for model in models:
     # # Define hdf5 file based on key_base as model.name
-    hdf5_file = path_to_fig_folder.joinpath('fit_dfs', f'fit_df_{model.name}.hdf5')
-    path_to_fig_folder.joinpath('fit_dfs').mkdir(parents=True, exist_ok=True)
+    hdf5_file = path_to_main_data_folder.joinpath('models', f'fit_df_{model.name}.hdf5')
     # # Load model parameters
     ind_fit_df = pd.read_hdf(hdf5_file, key=f'{model.name}_meta')
     mean_over_ind_fit_df = pd.read_hdf(hdf5_file, key=f'{model.name}_mean_over_ind')
@@ -139,6 +139,9 @@ for model in models:
 ind_fit_df = pd.concat(ind_fit_df_list)
 mean_over_ind_fit_df = pd.concat(mean_over_ind_fit_df_list)
 mean_fit_df = pd.concat(mean_fit_df_list)
+
+# Save error metrics for all models in one file, to be used for figS7
+mean_over_ind_fit_df.to_hdf(path_to_stats_file, key='all')
 
 # # Plot time-series data with fit for Proposed and Full model ################
 plot_models = [FullModel()]

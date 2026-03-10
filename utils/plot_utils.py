@@ -880,7 +880,10 @@ def plot_orientation_change_dist(event_df, agents, turn_threshold):
     """
     from scipy.optimize import curve_fit
     from settings.prop_settings import OrientationChange, DoubleMaxwellCenterNormal
-    _ax_x_cm, _ax_y_cm = 3.5, 4  # cm
+    # Define axis size relative to figure size
+    # _ax_x_cm, _ax_y_cm = 3.5, 4  # cm
+    _ax_x_cm = fig_width_cm / 3    # cm
+    _ax_y_cm = fig_width_cm / 3     # cm
 
     prop_class = OrientationChange()
     bins = np.arange(-100, 101, 5)

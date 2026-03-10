@@ -18,7 +18,7 @@ if document_type == 'presentation':
     plt.style.use('dark_background')  # For presentations
     SMALL_SIZE = 6
     BIGGER_SIZE = 8
-    ALPHA = 0.5
+    ALPHA = 0.3
     CMAP_GREY = plt.get_cmap('Greys_r')  # cmaps.grayC_r   # white to black
     CMAP_DIFF = plt.get_cmap('vanimo')
     CMAP_LARVA = plt.get_cmap('Blues_r')
@@ -28,7 +28,16 @@ if document_type == 'presentation':
     COLOR_TEXT = 'w'
     COLOR_ANNOT = 'w'
     COLOR_MODEL = 'w'
-    COLOR_AGENT_MARKER = 'k'    # same as background color
+    COLOR_BACKGROUND = 'k'
+    COLOR_AGENT_MARKER = COLOR_BACKGROUND    # same as background color
+
+    fig_width_cm = 18.4  # cm
+    fig_height_cm = fig_width_cm * 2/3  # cm
+    pad_x_cm = 1.5  # cm, allows for y-ticks, y-label
+    pad_y_cm = 1.5  # cm, allows for x-ticks, x-label and title
+    ax_x_cm = 2.5  # cm, full axis width (incl. ticks and labels)
+    ax_y_cm = 4  # cm, full axis height (incl. ticks and labels)
+
 elif document_type == 'paper':
     SMALL_SIZE = 6
     BIGGER_SIZE = 8
@@ -42,7 +51,16 @@ elif document_type == 'paper':
     COLOR_TEXT = 'k'
     COLOR_ANNOT = 'k'
     COLOR_MODEL = 'k'
-    COLOR_AGENT_MARKER = 'w'    # same as background color
+    COLOR_BACKGROUND = 'w'
+    COLOR_AGENT_MARKER = COLOR_BACKGROUND    # same as background color
+
+    fig_width_cm = 18.4  # cm
+    fig_height_cm = fig_width_cm * 2/3  # cm
+    pad_x_cm = 1.5  # cm, allows for y-ticks, y-label
+    pad_y_cm = 1.5  # cm, allows for x-ticks, x-label and title
+    ax_x_cm = 2.5  # cm, full axis width (incl. ticks and labels)
+    ax_y_cm = 4  # cm, full axis height (incl. ticks and labels)
+
 elif document_type == 'thesis':
     SMALL_SIZE = 10
     BIGGER_SIZE = 10
@@ -56,7 +74,15 @@ elif document_type == 'thesis':
     COLOR_TEXT = 'k'
     COLOR_ANNOT = 'k'
     COLOR_MODEL = 'k'
-    COLOR_AGENT_MARKER = 'w'    # same as background color
+    COLOR_BACKGROUND = 'w'
+    COLOR_AGENT_MARKER = COLOR_BACKGROUND    # same as background color
+
+    fig_width_cm = 13 * 1.25  # cm
+    fig_height_cm = fig_width_cm * 2/3  # cm
+    pad_x_cm = 2  # cm, allows for y-ticks, y-label
+    pad_y_cm = 2  # cm, allows for x-ticks, x-label and title
+    ax_x_cm = 3  # cm, full axis width (incl. ticks and labels)
+    ax_y_cm = 4  # cm, full axis height (incl. ticks and labels)
 
 # Colors ######################################################################
 # # Larva
@@ -86,14 +112,6 @@ AGE_PALETTE_DICT = {
 # Figure sizes ################################################################
 cm = 1/2.54  # centimeters in inches
 legend_space = 2 * cm
-fig_width_cm = 18.4                 # cm (Science Advances)
-fig_height_cm = fig_width_cm / 2    # cm
-fig_x_cm = 18  # cm
-fig_y_cm = 9  # cm
-pad_x_cm = 1.5  # cm, allows for y-ticks, y-label
-pad_y_cm = 1.5  # cm, allows for x-ticks, x-label and title
-ax_x_cm = 2.5   # cm, full axis width (incl. ticks and labels)
-ax_y_cm = 4     # cm, full axis height (incl. ticks and labels)
 
 # Extra large figures for supplementary columns or rows
 fig_big_width = 29          # cm, extra wide for supplementary columns
@@ -133,8 +151,8 @@ plt.rc('axes', titlesize=SMALL_SIZE)    # fontsize of the axes title
 plt.rc('axes', labelsize=SMALL_SIZE)    # fontsize of the x and y labels
 plt.rc('xtick', labelsize=SMALL_SIZE)   # fontsize of the tick labels
 plt.rc('ytick', labelsize=SMALL_SIZE)   # fontsize of the tick labels
-plt.rc('legend', fontsize=SMALL_SIZE, frameon=False)    # legend fontsize
-plt.rc('figure', titlesize=BIGGER_SIZE) # fontsize of the figure title
+plt.rc('legend', fontsize=SMALL_SIZE, frameon=False)            # legend fontsize
+plt.rc('figure', titlesize=BIGGER_SIZE, labelsize=SMALL_SIZE)   # fontsize of the figure title
 
 # # Lines
 plt.rcParams['lines.markersize'] = MARKER_SIZE

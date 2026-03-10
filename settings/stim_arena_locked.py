@@ -2,7 +2,7 @@ from settings.general_settings import resampling_window, rolling_window
 
 # Paths
 experiment_name = 'arena_locked'
-path_name = experiment_name
+path_name = 'fig1_and_4'
 
 # Prepare data settings
 do_tracking = True

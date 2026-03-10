@@ -9,9 +9,8 @@ from utils.general_utils import load_tracking_df
 # User settings
 # #############################################################################
 # Paths
-experiment_name = 'arena_locked'
-path_name = experiment_name
-path_to_fig_folder = path_to_main_fig_folder.joinpath(f'fig0_GA')
+path_name = 'fig1_and_4'
+path_to_fig_folder = path_to_main_fig_folder.joinpath(f'fig0_graphical_abstract')
 
 # Specify agents ##############################################################
 agents = [Larva(), Juvie(), ]

@@ -5,7 +5,7 @@ from settings.general_settings import resampling_window, rolling_window
 
 # Paths
 experiment_name = 'temporal'
-path_name = experiment_name
+path_name = 'figS3'
 
 # Prepare data settings
 do_tracking = False

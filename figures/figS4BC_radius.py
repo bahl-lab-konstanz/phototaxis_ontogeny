@@ -16,7 +16,7 @@ from settings.stim_homogeneous_radius import *
 alpha = 0.2
 
 # Paths
-path_to_fig_folder = path_to_main_fig_folder.joinpath('figS4_fov')
+path_to_fig_folder = path_to_main_fig_folder.joinpath('figS4')
 path_to_fig_folder.mkdir(exist_ok=True, parents=True)
 key_base = experiment_name
 
@@ -60,7 +60,7 @@ median_df = get_median_df(event_df, bin_name)
 # Plot midline distribution
 # #############################################################################
 fig, ax = plot_midline_length(event_df)
-savefig(fig, path_to_fig_folder.joinpath('radius_midline_length_distribution.pdf'), close_fig=True)
+savefig(fig, path_to_fig_folder.joinpath('B_radius_midline_length_distribution.pdf'), close_fig=True)
 
 # #############################################################################
 # Swim properties: plot median with bin
@@ -79,4 +79,4 @@ for j, stim_query in enumerate(stim_queries):
         bin_name, None,
         label, ticks, ticks,
     )
-    savefig(fig, path_to_fig_folder.joinpath(f'radius_median_{stim_query}.pdf'), close_fig=True)
+    savefig(fig, path_to_fig_folder.joinpath(f'B_radius_median_{stim_query}.pdf'), close_fig=True)

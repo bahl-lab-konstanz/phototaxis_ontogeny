@@ -5,7 +5,7 @@ import pandas as pd
 
 # Paths
 experiment_name = 'brightness_choice_simple'
-path_name = experiment_name
+path_name = 'fig3BD'
 
 # Prepare data settings
 do_tracking = False

@@ -6,7 +6,6 @@ simulations and sends notifications upon completion.
 
 Note:
     - User must specify simulation, stimulus, and agent settings.
-    - Slack notifications require valid configuration.
 """
 
 import datetime
@@ -15,7 +14,6 @@ import multiprocessing
 import numpy as np
 
 from settings.general_settings import *
-from utils.slack_helper import send_slack_message
 from utils.simulate_helpers import load_stimulus, task_run_agent, convert_agent_genotype
 from utils.prepare_data_wrapper import prepare_data_wrapper
 
@@ -28,40 +26,53 @@ if __name__ == '__main__':
     dt = 1 / 60  # s, time step size
     agent_IDs = np.arange(0, 96)  # agent IDs to simulate
 
+    # Stimulus settings
+    from settings.stim_brightness_choice_simple import *
+    input_data_date = '250520'
+
     # # For debugging:
     # n_processes = 1
     # agent_IDs = [0]
-
-    # Stimulus settings
-    from settings.stim_arena_locked import *
-    input_data_date = '250520'
-
-    # Your Slack name here
-    slack_receiver = 'Max Capelle'
+    # experiment_name = 'testing'
+    # path_name = 'testing'
 
     # Agent settings
-    agent_ages = [5, 27]  # dpf
+    agent_ages = [27, 5]  # dpf
     agent_genotype_dicts = {
-        'A_DC_A_A_A_wCx10': {
-            'percentage_turns': 'azimuth_virtual',
-            'percentage_left': 'st_d_c_x10',
-            'turn_angle': 'azimuth_virtual',
-            'total_duration': 'azimuth_virtual',
-            'total_distance': 'azimuth_virtual',
+        'model_ptB_plB_aB_tB_sB': {
+            'percentage_turns': 'blind',
+            'percentage_left': 'blind',
+            'turn_angle': 'blind',
+            'total_duration': 'blind',
+            'total_distance': 'blind',
         },
-        'A_DC_A_A_A_wCx5': {
-            'percentage_turns': 'azimuth_virtual',
-            'percentage_left': 'st_d_c_x5',
-            'turn_angle': 'azimuth_virtual',
-            'total_duration': 'azimuth_virtual',
-            'total_distance': 'azimuth_virtual',
+        'A_B_A_A_A': {
+            'percentage_turns': 'azimuth',
+            'percentage_left': 'blind',
+            'turn_angle': 'azimuth',
+            'total_duration': 'azimuth',
+            'total_distance': 'azimuth',
         },
-        'A_DC_A_A_A_wCx20': {
-            'percentage_turns': 'azimuth_virtual',
-            'percentage_left': 'st_d_c_x20',
-            'turn_angle': 'azimuth_virtual',
-            'total_duration': 'azimuth_virtual',
-            'total_distance': 'azimuth_virtual',
+        'B_C_B_B_B': {
+            'percentage_turns': 'blind',
+            'percentage_left': 'st_c',
+            'turn_angle': 'blind',
+            'total_duration': 'blind',
+            'total_distance': 'blind',
+        },
+        'B_D_B_B_B': {
+            'percentage_turns': 'blind',
+            'percentage_left': 'st_d',
+            'turn_angle': 'blind',
+            'total_duration': 'blind',
+            'total_distance': 'blind',
+        },
+        'B_DC_B_B_B': {
+            'percentage_turns': 'blind',
+            'percentage_left': 'st_d_c',
+            'turn_angle': 'blind',
+            'total_duration': 'blind',
+            'total_distance': 'blind',
         },
         'A_DC_A_A_A': {
             'percentage_turns': 'azimuth_virtual',
@@ -69,6 +80,41 @@ if __name__ == '__main__':
             'turn_angle': 'azimuth_virtual',
             'total_duration': 'azimuth_virtual',
             'total_distance': 'azimuth_virtual',
+        },
+        # 'A_DC_A_A_A_wCx5': {
+        #     'percentage_turns': 'azimuth_virtual',
+        #     'percentage_left': 'st_d_c_x5',
+        #     'turn_angle': 'azimuth_virtual',
+        #     'total_duration': 'azimuth_virtual',
+        #     'total_distance': 'azimuth_virtual',
+        # },
+        'DA_DA_DA_DA_DA': {
+            'percentage_turns': 'st_da',
+            'percentage_left': 'st_da',
+            'turn_angle': 'st_da',
+            'total_duration': 'st_da',
+            'total_distance': 'st_da',
+        },
+        'model_ptAV_plST_aAV_tAV_sAV': {
+            'percentage_turns': 'azimuth_virtual',
+            'percentage_left': 'st_d_c',
+            'turn_angle': 'azimuth_virtual',
+            'total_duration': 'azimuth_virtual',
+            'total_distance': 'azimuth_virtual',
+        },
+        'model_ptT_plT_aT_tT_sT': {
+            'percentage_turns': 'st_ad',
+            'percentage_left': 'st_ad',
+            'turn_angle': 'st_ad',
+            'total_duration': 'st_ad',
+            'total_distance': 'st_ad',
+        },
+        'superfit': {
+            'percentage_turns': 'st_superfit',
+            'percentage_left': 'st_superfit',
+            'turn_angle': 'st_superfit',
+            'total_duration': 'st_superfit',
+            'total_distance': 'st_superfit',
         },
     }
     r_view = 2  # cm, range of view (radius)
@@ -137,23 +183,19 @@ if __name__ == '__main__':
                 pool.close()
                 pool.join()
 
-        # Send slack message when done
+        # Print message when done
         print(
             "Simulation \033[92mdone\033[0m\n"
             f"\t{experiment_name}/{path_name} {agent_name} \033[94mn={n_agents}\033[0m"
         )
-        send_slack_message(to=slack_receiver,
-                           message=f'simulation done for {experiment_name}/{path_name} {agent_name}: n={n_agents}')
 
         # #####################################################################
         # Prepare data directly after simulation of this genotype
         # #####################################################################
         prepare_data_wrapper(
             age_category='simulations', agent_name=agent_name,
-            experiment_name=path_name,
+            path_name=path_name,
             flip_dict=flip_dict, split_dict=split_dict, label_dict=label_dict,
-            included_stim_names=None,  # stim_names are different before and after flipping
             rolling_window=rolling_window, resampling_window=resampling_window,
             do_tracking=do_tracking, do_event=do_event,
-            slack_receiver=slack_receiver
         )
