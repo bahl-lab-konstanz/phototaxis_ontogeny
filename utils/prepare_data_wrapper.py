@@ -106,8 +106,6 @@ def prepare_data_wrapper(
             min_percentage_grating_left=0.5,
         )
         included_experiment_IDs, excluded_experiment_IDs = prescreening.run()
-        # TODO: remove after debugging
-        # excluded_experiment_IDs = None
     else:
         excluded_experiment_IDs = None
 
@@ -122,8 +120,6 @@ def prepare_data_wrapper(
         overwrite_output_file=False
     )
     combined_event_df = combineData.run()
-    # TODO: remove after debugging
-    # combined_event_df = pd.read_hdf(path_to_input_file, key="all_bout_data_pandas")
 
     # Sanity Check ################################################################
     if do_event:
@@ -139,8 +135,6 @@ def prepare_data_wrapper(
             do_overwrite=True,
         )
         event_df = sanity_check.run()
-        # TODO: remove after debugging
-        # event_df = pd.read_hdf(path_to_input_file, key="all_bout_data_sanity_checked_pandas")
 
     # Analysis Start ##############################################################
     analysis_start = AnalysisStart(
