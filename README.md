@@ -1,7 +1,7 @@
 
 
 # Behavioral algorithms of ontogenetic switching in larval and juvenile zebrafish phototaxis
-**Authors**: Maxim Q. Capelle, Katja Slangewal, and Armin Bahl
+**Authors**: Maxim Q. Capelle, Katja Slangewal, Panagiotis E. Eleftheriadis, and Armin Bahl
 
 This code provides analysis and modeling tools for quantifying and simulating
 phototactic behavior in larval and juvenile zebrafish.
