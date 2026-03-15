@@ -28,7 +28,6 @@ if __name__ == '__main__':
 
     # Stimulus settings
     from settings.stim_brightness_choice_simple import *
-    input_data_date = '250520'
 
     # # For debugging:
     # n_processes = 1
@@ -129,7 +128,7 @@ if __name__ == '__main__':
         agent_genotype_name, agent_name = convert_agent_genotype(agent_key, agent_age)
 
         # Paths
-        path_to_input_folder = path_to_sim_folder.joinpath('input_data', input_data_date)
+        path_to_input_folder = path_to_sim_folder.joinpath('input_data')
         path_to_raw_data_folder = path_to_sim_folder.joinpath('raw_data', agent_name, path_name)
         path_to_raw_data_folder.mkdir(parents=True, exist_ok=True)
         if not path_to_input_folder.exists():
