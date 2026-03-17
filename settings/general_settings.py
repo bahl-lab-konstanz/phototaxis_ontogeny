@@ -7,13 +7,15 @@ from utils.general_utils import *
 # #############################################################################
 # User settings
 # #############################################################################
-# Paths #######################################################################
 # Data (intput)
-path_to_main_data_folder = Path('/Users/mc/NC/Capelle et al. 2025/ready_to_submit_26_march/all_data')
+path_to_main_data_folder = Path('all_data')  # TODO: change to actual path to "all_data" folder.
 # Figures (output)
-path_to_main_fig_folder = Path('/Users/mc/NC/Capelle et al. 2025/ready_to_submit_26_march/fig_components')
+path_to_main_fig_folder = Path('fig_components')  # TODO: change to actual path to store figures.
 # Simulations (output)
 path_to_sim_folder = path_to_main_data_folder.joinpath("simulations")
+
+# Simulation settings
+n_processes = 4  # TODO: update to available cores for simulation.
 
 # Default settings ############################################################
 # Set seeds random number generator
@@ -26,9 +28,6 @@ turn_threshold = 10  # deg
 resampling_window = pd.Timedelta(1, unit='s')   # to compute median_df
 rolling_window = pd.Timedelta(1, unit='s')      # to compute median_df and rolled_df
 
-# Simulation settings
-n_processes = 4
-
 # Visualisation settings ######################################################
-document_type = 'paper'  # 'paper' or 'presentation'
+document_type = 'paper'  # 'paper' (white background) or 'presentation' (black background)
 
