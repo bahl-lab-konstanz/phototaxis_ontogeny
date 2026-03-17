@@ -29,7 +29,7 @@ FIGURE_SCRIPTS = [
     "fig1_and_4.py",
     "fig1_and_4_all_agents.py",
     "fig2.py",
-    "fig3_fit_models.py",   # preprocessing – must run before fig3
+    "fig3_fit_models.py",
     "fig3.py",
     "fig4B.py",
     # Supplemental figures
@@ -96,10 +96,10 @@ def main():
         elapsed = time.time() - t0
 
         if result.returncode == 0:
-            print(f"           OK  ({elapsed:.1f}s)\n")
+            print(f"[{i}/{total}] OK  ({elapsed:.1f}s)\n")
             results[script] = "ok"
         else:
-            print(f"           FAILED (exit code {result.returncode}, {elapsed:.1f}s)\n")
+            print(f"[{i}/{total}] FAILED (exit code {result.returncode}, {elapsed:.1f}s)\n")
             results[script] = "failed"
 
     # Summary ----------------------------------------------------------------

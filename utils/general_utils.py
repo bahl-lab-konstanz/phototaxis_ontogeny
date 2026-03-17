@@ -373,7 +373,16 @@ def my_double_linear(x, a_pos, a_neg, b):
 
 
 def my_double_log(x, a_pos, a_neg, b):
-    return np.where(x >= 0, a_pos * np.log(x) + b, a_neg * np.log(-x) + b)
+    x = np.asarray(x, dtype=float)
+    y = np.full_like(x, np.nan, dtype=float)  # default for x == 0
+
+    pos = x > 0
+    neg = x < 0
+
+    y[pos] = a_pos * np.log(x[pos]) + b
+    y[neg] = a_neg * np.log(-x[neg]) + b
+
+    return y
 
 
 # #############################################################################

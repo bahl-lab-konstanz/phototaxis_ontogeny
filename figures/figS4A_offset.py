@@ -57,7 +57,7 @@ event_df[bin_name] = pd.cut(event_df.index.get_level_values('stimulus_name'), bi
 # Swim properties: plot median with bin
 # #############################################################################
 # Compute median ##########################################################
-phase_event_df = event_df.loc[event_df['time'] > 10]
+phase_event_df = event_df.loc[event_df['time'] > 10].copy()
 median_df = get_median_df(phase_event_df, bin_name)
 
 fig = plot_median(

@@ -82,7 +82,7 @@ for model_name in model_names:
         agents, prop_classes,
         bin_name, model_name,
         label=label, ticks=ticks, tick_labels=tick_labels,
-        x_lim=[-5, 305],
+        x_lim=[-305, 305],
     )
     fig.suptitle(f'{stim_name} | {col_name} | {model_name}')
     savefig(fig, path_to_fig_folder.joinpath('median', f'{stim_name}_{model_name}.pdf'), close_fig=True)

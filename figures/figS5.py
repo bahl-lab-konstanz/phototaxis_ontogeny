@@ -22,7 +22,7 @@ path_to_fig_folder.mkdir(exist_ok=True)
 # Performance
 # #############################################################################
 # Load data
-path_to_stats1_file = path_to_main_data_folder.joinpath('fig1_and_4').joinpath('stats.hdf5')
+path_to_stats1_file = path_to_main_data_folder.joinpath('fig1').joinpath('stats.hdf5')
 try:
     df_performance = pd.read_hdf(path_to_stats1_file, key='performance')
 except FileNotFoundError:

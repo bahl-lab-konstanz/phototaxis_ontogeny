@@ -108,7 +108,7 @@ def savefig(fig, path: Path, dpi=300, transparent=None, close_fig=False, **kwarg
     existing_part_str = str(existing_part)
     non_existing_part_str = str(path.parent)[len(existing_part_str):]
     if len(non_existing_part_str):
-        print(f"\tsavefig(): Creating folder {existing_part_str}\033[1m{non_existing_part_str}\033[0m")
+        print(f"\tsavefig(): Creating folder {existing_part_str}\033[94m{non_existing_part_str}\033[0m")
         path.parent.mkdir(parents=True, exist_ok=True)
 
     # Set transparency

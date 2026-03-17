@@ -22,7 +22,7 @@ agents_str = '_'.join([agent.name for agent in agents])
 # #############################################################################
 # Load and prepare data
 # #############################################################################
-full_tracking_df = load_tracking_df(path_to_main_data_folder, path_name, agents)
+full_tracking_df = load_tracking_df(path_to_main_data_folder, 'fig1_and_4', agents)
 
 # Remove values too close to the wall
 tracking_df = full_tracking_df.loc[full_tracking_df['radius'] <= 5].copy()
@@ -68,7 +68,13 @@ for k, agent in enumerate(agents):
         # Create numpy array
         fish_arrays = np.array(fish_arrays)
         # Normalise within fish, to compute percentage
-        fish_arrays_normed = fish_arrays / np.sum(fish_arrays, axis=1, keepdims=True) * 100
+        # fish_arrays_normed = fish_arrays / np.sum(fish_arrays, axis=1, keepdims=True) * 100
+        row_sums = np.sum(fish_arrays, axis=1, keepdims=True)
+        fish_arrays_normed = np.divide(
+            fish_arrays, row_sums,
+            out=np.zeros_like(fish_arrays, dtype=float),
+            where=row_sums != 0
+        ) * 100
 
         # The outermost hexagons only include half of the data,
         # so we set their values to nan to avoid misinterpretation
@@ -78,9 +84,17 @@ for k, agent in enumerate(agents):
 
         # Compute mean, std, sem over fish
         n_fish = fish_arrays_normed.shape[0]
-        h_mean = np.nanmean(fish_arrays_normed, axis=0)
-        h_std = np.nanstd(fish_arrays_normed, axis=0)
-        h_sem = h_std / np.sqrt(n_fish)
+        # # Count valid values per hexbin (across fish)
+        valid_counts = np.sum(~np.isnan(fish_arrays_normed), axis=0)
+        has_data = valid_counts > 0
+        # # Pre-fill with NaN so empty hexbins remain NaN and never trigger nanmean warnings
+        h_mean = np.full(fish_arrays_normed.shape[1], np.nan, dtype=float)
+        h_std = np.full(fish_arrays_normed.shape[1], np.nan, dtype=float)
+        h_sem = np.full(fish_arrays_normed.shape[1], np.nan, dtype=float)
+        # # Only compute stats for bins that contain at least one non-NaN value
+        h_mean[has_data] = np.nanmean(fish_arrays_normed[:, has_data], axis=0)
+        h_std[has_data] = np.nanstd(fish_arrays_normed[:, has_data], axis=0)
+        h_sem[has_data] = h_std[has_data] / np.sqrt(valid_counts[has_data])
 
         # Store values in dictionary
         hb_dict[agent.name][stim_name]['fish_arrays'] = fish_arrays

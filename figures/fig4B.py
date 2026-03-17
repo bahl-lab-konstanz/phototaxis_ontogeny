@@ -19,7 +19,7 @@ from settings.plot_settings import *
 # #############################################################################
 # Paths
 path_to_fig_folder = path_to_main_fig_folder.joinpath('fig1_and_4')
-path_to_stats1_file = path_to_main_data_folder.joinpath('fig1_and_4', 'stats.hdf5')
+path_to_stats1_file = path_to_main_data_folder.joinpath('fig1', 'stats.hdf5')
 
 # #############################################################################
 # Compute performance scores

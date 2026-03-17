@@ -5,7 +5,7 @@ from scipy.optimize import minimize
 
 # Local library imports
 from utils.general_utils import load_event_df, get_median_df, get_b_values
-from settings.general_settings import path_to_main_fig_folder
+from settings.general_settings import path_to_main_fig_folder, path_to_main_data_folder
 from settings.agent_settings import *
 from settings.prop_settings import *
 from fig3_helpers import plot_time_series

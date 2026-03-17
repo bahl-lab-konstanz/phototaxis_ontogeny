@@ -14,7 +14,7 @@ path_to_fig_folder = path_to_main_fig_folder.joinpath('figS7')
 path_to_fig_folder.mkdir(exist_ok=True)
 
 # Data generated in fig1_and_4_all_agents.py
-path_to_stats1_file = path_to_main_data_folder.joinpath('fig1_and_4', 'stats.hdf5')
+path_to_stats1_file = path_to_main_data_folder.joinpath('fig1', 'stats.hdf5')
 
 # Agents
 ref_agents = [Larva(), Juvie()]
