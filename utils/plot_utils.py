@@ -88,12 +88,17 @@ def savefig(fig, path: Path, dpi=300, transparent=None, close_fig=False, **kwarg
         close_fig (bool): Whether to close the figure after saving.
         **kwargs: Additional keyword arguments for `fig.savefig`.
     """
-    # Replace all but the last '.' with '_'
+    # Replace all but the last '.' with '_', preserving 'et al.' patterns
     path_str = str(path)
     last_dot_index = path_str.rfind('.')   # Find the last occurrence of '.' to preserve file extension
     if last_dot_index != -1:  # Ensure there's a dot
-        # Replace all earlier dots with underscores
-        path_str = path_str[:last_dot_index].replace('.', '_') + path_str[last_dot_index:]
+        # Replace all earlier dots with underscores, except those in 'et al.'
+        prefix = path_str[:last_dot_index]
+        placeholder = '\x00ETAL\x00'
+        prefix = prefix.replace('et al.', placeholder)
+        prefix = prefix.replace('.', '_')
+        prefix = prefix.replace(placeholder, 'et al.')
+        path_str = prefix + path_str[last_dot_index:]
     path = Path(path_str)
 
     # Check the path and its parents

@@ -102,11 +102,12 @@ for model in models:
     # Define hdf5_file and check if it exists #################################
     # # Define hdf5 file based on key_base as model.name
     key_base = model.name
-    hdf5_file = path_to_main_data_folder.joinpath('models', f'fit_df_{key_base}.hdf5')
-    path_to_fig_folder.joinpath('fit_dfs').mkdir(parents=True, exist_ok=True)
-    # if hdf5_file.exists():
-    #     # Fit already performed and stored
-    #     continue
+    path_to_hdf5_folder = path_to_main_data_folder.joinpath('models')
+    path_to_hdf5_folder.mkdir(exist_ok=True, parents=True)
+    hdf5_file = path_to_hdf5_folder.joinpath(f'fit_df_{key_base}.hdf5')
+    if hdf5_file.exists():
+        # Fit already performed and stored
+        continue
 
     # Fit model ###############################################################
     ind_fit_df, mean_over_ind_fit_df, mean_fit_df = fit_spatial_temporal_model(

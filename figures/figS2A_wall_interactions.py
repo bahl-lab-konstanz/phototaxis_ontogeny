@@ -5,6 +5,7 @@ from utils.plot_utils import *
 from settings.agent_settings import Larva, Juvie
 from settings.plot_settings import *
 from settings.general_settings import *
+from settings.prop_settings import OrientationChange
 
 
 # #############################################################################

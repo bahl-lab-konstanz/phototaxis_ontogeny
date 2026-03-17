@@ -20,7 +20,7 @@ path_name = 'fig1_and_4'
 path_to_figS1_folder = path_to_main_fig_folder.joinpath('figS1')
 path_to_figS5_folder = path_to_main_fig_folder.joinpath('figS5')
 path_to_fig2B_folder = path_to_main_fig_folder.joinpath('fig2', '2B')
-path_to_stats_file = path_to_main_data_folder.joinpath('fig1_and_4', f'stats.hdf5')
+path_to_stats_file = path_to_main_data_folder.joinpath('fig1', f'stats.hdf5')
 path_to_stats_txt = path_to_figS1_folder.joinpath('stats.txt')
 
 stats_columns = [
@@ -227,7 +227,7 @@ closefigs(figs4)
 # #########################################################################
 # Loop over test agents
 # #########################################################################
-for agent_genotype in agent_mapping.keys():
+for agent_genotype, agent_dict in agent_mapping.items():
     larva_agent = LarvaAgent()
     juvie_agent = JuvieAgent()
     if not agent_genotype == 'model_ptAV_plST_aAV_tAV_sAV':
@@ -235,9 +235,11 @@ for agent_genotype in agent_mapping.keys():
         larva_agent_name = f'{agent_genotype}_05dpf'
         larva_agent.name = larva_agent_name
         larva_agent.query = f'fish_age <= 5 and fish_genotype == "{agent_genotype.lower()}"'
+        larva_agent.folder_name = agent_dict['folder_name']
         juvie_agent_name = f'{agent_genotype}_27dpf'
         juvie_agent.name = juvie_agent_name
         juvie_agent.query = f'fish_age >= 21 and fish_genotype == "{agent_genotype.lower()}"'
+        juvie_agent.folder_name = agent_dict['folder_name']
 
     # Define agent string
     test_agents = [larva_agent, juvie_agent]
@@ -317,7 +319,7 @@ for agent_genotype in agent_mapping.keys():
     # #########################################################################
     # Plot trajectories, 1D and 2D density
     # #########################################################################
-    if agent_genotype == 'model_ptAV_plST_aAV_tAV_sAV' or agent_genotype == 'A_DC_A_A_A_wCx5':  # Proposed model versions
+    if agent_genotype == 'model_ptAV_plST_aAV_tAV_sAV' or agent_genotype == 'A_DC_A_A_A_wCx5':  # Illustrate these models
         # Plot trajectories ###################################################
         plot_all_trajectories(full_test_tracking_df, test_agents, stim_dict, path_to_figS1_folder)
         for k, (agent, exp_ID) in enumerate(zip(test_agents, [3, 14])):

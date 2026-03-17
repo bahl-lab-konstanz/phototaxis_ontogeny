@@ -76,11 +76,6 @@ def load_median_df(path_to_main_data_folder, path_name, agents):
     return load_df(agents, path_to_main_data_folder, path_name, 'analysed_data.hdf5', 'all_bout_data_pandas_median')
 
 
-def load_rolled_df(path_to_main_data_folder, path_name, agents):
-    print(f"{datetime.datetime.now():%H:%M:%S} Loading rolled data ", end='')
-    return load_df(agents, path_to_main_data_folder, path_name, 'analysed_data.hdf5', 'all_bout_data_pandas_rolled')
-
-
 def load_df(agents, path_to_main_data_folder, path_name, file_name, key, require_all_data=False, verbose=True):
     """Load and concat all data"""
     # Ensure agents is iterable
@@ -95,8 +90,13 @@ def load_df(agents, path_to_main_data_folder, path_name, file_name, key, require
         if verbose:
             print(f"{agent.name}... ", end='')
         try:
-            if path_name == 'brightness_choice':
-                df = _load_df_brightness_choice(path_to_main_data_folder, agent.name, file_name, key)
+            if path_name == 'fig1_and_4':
+                # For fig1_and_4 data, we have a different folder structure, so we need to adjust the path
+                df = pd.read_hdf(
+                    path_to_main_data_folder
+                    .joinpath(agent.folder_name, agent.name, file_name),
+                    key=key
+                )
             else:
                 df = pd.read_hdf(
                     path_to_main_data_folder
@@ -134,18 +134,6 @@ def load_df(agents, path_to_main_data_folder, path_name, file_name, key, require
     if verbose:
         print("| \033[92mdone\033[0m")
     return event_df
-
-
-def _load_df_brightness_choice(path_to_main_data_folder, agent_name, file_name, key):
-    if agent_name == 'juvie':
-        return pd.read_hdf(
-            path_to_main_data_folder.joinpath('brightness_choice_extended', agent_name, 'analysed_data.hdf5'),
-            key=key)
-    else:
-        return pd.read_hdf(
-            path_to_main_data_folder.joinpath('brightness_choice', agent_name, file_name),
-            key=key
-        )
 
 
 def get_median_df(event_df, bin_name, groupby_labels=None):

@@ -151,6 +151,7 @@ agent_mapping = {
         'total_distance': 'blind',
         'label': agent_base_norm, 'n_pars': 5*2,
         'fig3_model_name': 'none',
+        'folder_name': 'figS5_B',
     },  # Blind
     'A_B_A_A_A': {
         'percentage_turns': 'azimuth_virtual',
@@ -159,7 +160,9 @@ agent_mapping = {
         'total_duration': 'azimuth_virtual',
         'total_distance': 'azimuth_virtual',
         'label': 'A', 'n_pars': 4*2 + 2,
-        'fig3_model_name': 'none'},  # Averaging pathway (Fig. 2)
+        'fig3_model_name': 'none',
+        'folder_name': 'figS5_A',
+    },  # Averaging pathway (Fig. 2)
     'B_C_B_B_B': {
         'percentage_turns': 'blind',
         'percentage_left': 'st_c',
@@ -167,7 +170,9 @@ agent_mapping = {
         'total_duration': 'blind',
         'total_distance': 'blind',
         'label': 'C', 'n_pars': 4*2 + 3,
-        'fig3_model_name': 'c'},  # Contrast pathway
+        'fig3_model_name': 'c',
+        'folder_name': 'figS5_C',
+    },  # Contrast pathway
     'B_D_B_B_B': {
         'percentage_turns': 'blind',
         'percentage_left': 'st_d',
@@ -175,7 +180,9 @@ agent_mapping = {
         'total_duration': 'blind',
         'total_distance': 'blind',
         'label': 'D', 'n_pars': 4*2 + 5,
-        'fig3_model_name': 'd'},  # Derivative pathway
+        'fig3_model_name': 'd',
+        'folder_name': 'figS5_D',
+    },  # Derivative pathway
     'B_DC_B_B_B': {
         'percentage_turns': 'blind',
         'percentage_left': 'st_d_c',
@@ -183,7 +190,9 @@ agent_mapping = {
         'total_duration': 'blind',
         'total_distance': 'blind',
         'label': 'D+C', 'n_pars': 4*2 + 5,
-        'fig3_model_name': 'd_c'},  # Contrast + Derivative (Fig. 3)
+        'fig3_model_name': 'd_c',
+        'folder_name': 'figS5_DC',
+    },  # Contrast + Derivative (Fig. 3)
     'A_DC_A_A_A_wCx5': {
         'percentage_turns': 'azimuth_virtual',
         'percentage_left': 'st_d_c_x5',
@@ -191,7 +200,8 @@ agent_mapping = {
         'total_duration': 'azimuth_virtual',
         'total_distance': 'azimuth_virtual',
         'label': 'Proposed*', 'n_pars': 4 * 2 + 5,
-        'fig3_model_name': 'd_c'
+        'fig3_model_name': 'd_c',
+        'folder_name': 'figS5_DCx5',
     },
     'DA_DA_DA_DA_DA': {
         'percentage_turns': 'st_da',
@@ -200,7 +210,9 @@ agent_mapping = {
         'total_duration': 'st_da',
         'total_distance': 'st_da',
         'label': 'DA', 'n_pars': 5 * 5,
-        'fig3_model_name': 'da'},
+        'fig3_model_name': 'da',
+        'folder_name': 'figS5_DA',
+    },
     'model_ptAV_plST_aAV_tAV_sAV': {
         'percentage_turns': 'azimuth_virtual',
         'percentage_left': 'st_d_c',
@@ -208,7 +220,9 @@ agent_mapping = {
         'total_duration': 'azimuth_virtual',
         'total_distance': 'azimuth_virtual',
         'label': 'Proposed', 'n_pars': 4*2 + 5,
-        'fig3_model_name': 'd_c'},
+        'fig3_model_name': 'd_c',
+        'folder_name': 'fig4',
+},
     'model_ptT_plT_aT_tT_sT': {
         'percentage_turns': 'st_ad',
         'percentage_left': 'st_ad',
@@ -216,7 +230,9 @@ agent_mapping = {
         'total_duration': 'st_ad',
         'total_distance': 'st_ad',
         'label': 'AD', 'n_pars': 5 * 5,
-        'fig3_model_name': 'da'},  # Averaging-derivative pathway (Fig. S4)
+        'fig3_model_name': 'da',
+        'folder_name': 'figS5_AD',
+},  # Averaging-derivative pathway (Fig. S4)
     'superfit': {
         'percentage_turns': 'st_superfit',
         'percentage_left': 'st_superfit',
@@ -224,7 +240,9 @@ agent_mapping = {
         'total_duration': 'st_superfit',
         'total_distance': 'st_superfit',
         'label': 'Five-pathways', 'n_pars': 5 * 13,
-        'fig3_model_name': 'a_ad_d_c_da'},
+        'fig3_model_name': 'a_ad_d_c_da',
+        'folder_name': 'figS5_superfit',
+    },
 }
 
 # Specify ordering in fig1 figs7
