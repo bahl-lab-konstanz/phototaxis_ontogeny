@@ -269,12 +269,12 @@ for i, stim_values in enumerate(stim_dict.values()):
         print(f"\t{stim_label} vs Control {agent.label}:\t {cohens_d_to_text(cohen_d)} ({cohen_d:.2f})")
     # # Within stimulus, between agents
     cohen_d = (stat_df
-        .query(f'agent0 == "larva" and agent1 == "juvie"')
+        .query(f'agent0 == "{agents[0].name}" and agent1 == "{agents[1].name}"')
         .query(f'stim0 == "{stim_name}" and stim1 == "{stim_name}"')
         .query(f'column_name == "{column_name}"')
     ['cohen_d'].values[0]
     )
-    print(f"\t{stim_label} Larvae vs Juveniles:\t {cohens_d_to_text(cohen_d)} ({cohen_d:.2f})")
+    print(f"\t{stim_label} {agents[0].label} vs {agents[1].label}:\t {cohens_d_to_text(cohen_d)} ({cohen_d:.2f})")
 
     print(f"Plotting statistics: {stim_name}", end='\r')
     # Add axes
