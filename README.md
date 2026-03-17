@@ -9,8 +9,7 @@ The code extracts, compares, and fits behavioral algorithms from
 experimental data to reveal developmental switches in phototaxis.
 
 If you use this code in your work, please cite our paper:
-Capelle et al., Behavioral algorithms of ontogenetic switching in larval and juvenile zebrafish phototaxis, iScience, 2026
-([DOI link])
+Capelle et al., Behavioral algorithms of ontogenetic switching in larval and juvenile zebrafish phototaxis, iScience, 2026.
 
 <img src="visual_abstract.png" alt="Visual abstract" width="300"/>
 
@@ -29,7 +28,7 @@ Capelle et al., Behavioral algorithms of ontogenetic switching in larval and juv
 3. Run the scripts in the `figures/` directory to generate the desired figures. Alternatively, all figures can be generated at once by running `figures/run_all_figures.py`.
    The following dependencies between scripts should be noted:
    - `fig3.py` requires `fig3_fit_models.py`.
-   - 'fig4B.py' requires fig1_and_4_all_agents.py`.
+   - `fig4B.py` requires `fig1_and_4_all_agents.py`.
    - `figS5.py` requires `fig1_and_4_all_agents.py`.
    - `figS6.py` requires `fig2.py` and `fig3_fit_models.py`.
    - `figS7.py` requires `fig1_and_4_all_agents.py`.
