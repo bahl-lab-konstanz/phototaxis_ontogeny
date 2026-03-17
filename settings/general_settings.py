@@ -8,7 +8,7 @@ from utils.general_utils import *
 # User settings
 # #############################################################################
 # Data (intput)
-path_to_main_data_folder = Path('all_data')  # TODO: change to actual path to "all_data" folder.
+path_to_main_data_folder = Path('all_data')  # TODO: add path to folder containing all data folders.
 # Figures (output)
 path_to_main_fig_folder = Path('fig_components')  # TODO: change to actual path to store figures.
 # Simulations (output)
