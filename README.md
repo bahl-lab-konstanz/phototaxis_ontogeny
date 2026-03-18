@@ -12,6 +12,7 @@ If you use this code in your work, please cite our paper:
 Capelle et al., Behavioral algorithms of ontogenetic switching in larval and juvenile zebrafish phototaxis, _iScience_, 2026.
 
 All data can be found under the persistent identifier: [KonData Repository](https://doi.org/10.48606/sb32fkvwj5avwhbr).
+
 <img src="visual_abstract.png" alt="Visual abstract" width="300"/>
 
 ### Folder Structure
