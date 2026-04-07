@@ -9,7 +9,9 @@ The code extracts, compares, and fits behavioral algorithms from
 experimental data to reveal developmental switches in phototaxis.
 
 If you use this code in your work, please cite our paper:
-Capelle et al., Behavioral algorithms of ontogenetic switching in larval and juvenile zebrafish phototaxis, iScience, 2026.
+Capelle et al., Behavioral algorithms of ontogenetic switching in larval and juvenile zebrafish phototaxis, _iScience_, 2026.
+
+All data can be found under the persistent identifier: [KonData Repository](https://doi.org/10.48606/sb32fkvwj5avwhbr).
 
 <img src="visual_abstract.png" alt="Visual abstract" width="300"/>
 
@@ -18,7 +20,7 @@ Capelle et al., Behavioral algorithms of ontogenetic switching in larval and juv
 - `settings/` — Configuration and settings files
 - `utils/` — Utility modules and helper functions
 - `requirements.txt` — List of required Python packages
-- `readme.md` — Project documentation
+- `README.md` — Project documentation
 - `prepare_data.py` — Script for preparing and processing of raw data
 - `simulate.py` — Script for running simulations based on fitted models
 
